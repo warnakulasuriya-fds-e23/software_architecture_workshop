@@ -1,0 +1,1335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SnackPay — Cashless School Cafeteria Platform · Architecture</title>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#141b2d; --panel-2:#1b2540; --ink:#e8ecf4; --muted:#9aa8c7;
+    --line:#26324f; --brand:#6d5efc; --brand-2:#22d3ee; --accent:#f472b6; --ok:#34d399;
+    --warn:#fbbf24; --danger:#f87171;
+    /* C4 palette */
+    --c4-person:#0b3b6f; --c4-person-b:#0a2c52;
+    --c4-system:#1168bd; --c4-system-b:#0d4f92;
+    --c4-container:#3aa0ff; --c4-container-b:#2b7fd4;
+    --c4-component:#8ec6ff; --c4-component-b:#5aa6ec;
+    --c4-ext:#5b6577; --c4-ext-b:#454e5e;
+    --c4-db:#7c5cff; --c4-db-b:#5f45d6;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:radial-gradient(1200px 600px at 80% -10%,#1a2344 0,transparent 60%),
+    radial-gradient(1000px 500px at -10% 10%,#241938 0,transparent 55%),var(--bg);
+    color:var(--ink);font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{display:grid;grid-template-columns:280px 1fr;max-width:1500px;margin:0 auto;gap:0}
+  /* Sidebar */
+  aside{position:sticky;top:0;height:100vh;overflow:auto;padding:28px 20px;border-right:1px solid var(--line);
+    background:linear-gradient(180deg,#0f1523,#0c111c)}
+  aside .brand{display:flex;align-items:center;gap:12px;margin-bottom:6px}
+  aside .brand .logo{width:40px;height:40px;border-radius:11px;background:linear-gradient(135deg,var(--brand),var(--brand-2));
+    display:grid;place-items:center;font-weight:800;color:#fff;box-shadow:0 8px 24px -8px var(--brand)}
+  aside .brand b{font-size:19px;letter-spacing:.2px}
+  aside .sub{color:var(--muted);font-size:12px;margin:0 0 20px 52px}
+  nav a{display:block;color:var(--muted);text-decoration:none;padding:7px 12px;border-radius:8px;font-size:13.5px;
+    border-left:2px solid transparent}
+  nav a:hover{color:var(--ink);background:#161f36}
+  nav a.grp{margin-top:16px;color:#6f7ea3;font-size:11px;text-transform:uppercase;letter-spacing:1.4px;font-weight:700;pointer-events:none}
+  /* Main */
+  main{padding:56px 64px 120px;max-width:1120px}
+  .hero{border:1px solid var(--line);border-radius:22px;padding:44px 44px 40px;
+    background:linear-gradient(135deg,#161e36 0,#12182b 60%);position:relative;overflow:hidden}
+  .hero:before{content:"";position:absolute;inset:0;background:
+    radial-gradient(600px 260px at 90% 0,rgba(109,94,252,.30),transparent 60%),
+    radial-gradient(500px 240px at 0 100%,rgba(34,211,238,.18),transparent 60%);pointer-events:none}
+  .hero h1{font-size:42px;line-height:1.1;margin:6px 0 12px;letter-spacing:-.5px}
+  .hero h1 span{background:linear-gradient(120deg,var(--brand-2),var(--brand),var(--accent));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p{color:var(--muted);font-size:17px;max-width:760px;margin:0}
+  .pillrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:22px}
+  .pill{font-size:12px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);
+    background:#0f1626;color:#c7d2ec}
+  .pill b{color:var(--brand-2)}
+  h2{font-size:27px;margin:64px 0 8px;letter-spacing:-.3px;scroll-margin-top:24px}
+  h2 .n{color:var(--brand);font-weight:800;margin-right:10px}
+  h3{font-size:19px;margin:34px 0 8px;color:#dfe6f5}
+  h4{font-size:15px;margin:22px 0 6px;color:var(--brand-2);text-transform:uppercase;letter-spacing:1px}
+  p,li{color:#cdd6ea}
+  .lead{color:var(--muted);font-size:17px}
+  a.inline{color:var(--brand-2)}
+  code{background:#0f1626;border:1px solid var(--line);border-radius:6px;padding:1px 6px;font-size:13px;
+    font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;color:#a7f3d0}
+  pre{background:#0b1120;border:1px solid var(--line);border-radius:14px;padding:18px 20px;overflow:auto;
+    font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:13px;line-height:1.6;color:#c9d4ee}
+  pre .k{color:#c792ea}.pre .s{color:#a7f3d0}
+  .card{border:1px solid var(--line);border-radius:16px;padding:22px 24px;background:linear-gradient(180deg,#131a2c,#10162552);margin:14px 0}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .kpi{border:1px solid var(--line);border-radius:16px;padding:18px 20px;background:#111a2e}
+  .kpi .big{font-size:30px;font-weight:800;background:linear-gradient(120deg,var(--brand-2),var(--brand));
+    -webkit-background-clip:text;background-clip:text;color:transparent}
+  .kpi .lab{color:var(--muted);font-size:13px;margin-top:2px}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:#9fb0d6;font-size:12px;text-transform:uppercase;letter-spacing:.6px;background:#0f1626}
+  tr:hover td{background:#101a2e}
+  .tag{display:inline-block;font-size:11px;padding:2px 9px;border-radius:999px;font-weight:600}
+  .t-p1{background:#132e4d;color:#7dd3fc;border:1px solid #1d4e7a}
+  .t-p2{background:#33244a;color:#d8b4fe;border:1px solid #563a86}
+  .t-ok{background:#0f3327;color:#6ee7b7;border:1px solid #1f6b4f}
+  .callout{border-left:3px solid var(--brand);background:#131b30;border-radius:0 12px 12px 0;padding:14px 18px;margin:16px 0}
+  .callout.warn{border-color:var(--warn);background:#26200f}
+  .callout.info{border-color:var(--brand-2);background:#0f2330}
+  .fig{border:1px solid var(--line);border-radius:18px;padding:22px;margin:20px 0;background:
+    linear-gradient(180deg,#0e1526,#0b101d);overflow:auto}
+  .fig .cap{color:var(--muted);font-size:13px;margin-top:12px;text-align:center}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-top:14px;font-size:12px;color:var(--muted)}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+  svg{max-width:100%;height:auto;display:block;margin:0 auto}
+  .foot{margin-top:80px;border-top:1px solid var(--line);padding-top:22px;color:var(--muted);font-size:13px}
+  ul.clean{list-style:none;padding-left:0}
+  ul.clean li{padding-left:26px;position:relative;margin:7px 0}
+  ul.clean li:before{content:"▸";position:absolute;left:4px;color:var(--brand)}
+  @media(max-width:1000px){.wrap{grid-template-columns:1fr}aside{display:none}main{padding:32px 22px 80px}.grid2,.grid3{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<aside>
+  <div class="brand"><div class="logo">S</div><b>SnackPay</b></div>
+  <div class="sub">Cashless Cafeteria Platform</div>
+  <nav>
+    <a class="grp">Overview</a>
+    <a href="#summary">Executive Summary</a>
+    <a href="#problem">Problem &amp; Solution</a>
+    <a href="#decisions">Key Decisions</a>
+    <a href="#principles">Principles &amp; Requirements</a>
+    <a class="grp">C4 Architecture</a>
+    <a href="#c1">L1 · System Context</a>
+    <a href="#c2">L2 · Containers</a>
+    <a href="#c3">L3 · Components</a>
+    <a href="#deploy">Deployment (GCP)</a>
+    <a class="grp">Runtime Flows</a>
+    <a href="#flow-topup">Top-up Flow</a>
+    <a href="#flow-order">Order &amp; Delivery</a>
+    <a href="#flow-offline">Offline POS Sync</a>
+    <a class="grp">Deep Dives</a>
+    <a href="#tenancy">Multi-Tenancy</a>
+    <a href="#data">Data Model</a>
+    <a href="#offline">Offline &amp; BYOD POS</a>
+    <a href="#qr">QR Lifecycle &amp; Printing</a>
+    <a href="#billing">Subscription &amp; Billing</a>
+    <a href="#notify">Notifications (Simulated)</a>
+    <a href="#security">Security &amp; Compliance</a>
+    <a class="grp">Delivery</a>
+    <a href="#local">One-Command Local Dev</a>
+    <a href="#nfr">NFRs &amp; SLOs</a>
+    <a href="#roadmap">Phasing &amp; Roadmap</a>
+    <a href="#risks">Risks</a>
+  </nav>
+</aside>
+<main>
+
+<div class="hero" id="top">
+  <div class="pill">Architecture Blueprint · v1.0 · July 2026</div>
+  <h1>SnackPay<br><span>Cashless School Cafeteria Platform</span></h1>
+  <p class="lead">A multi-tenant, cloud-native platform that lets parents fund and control their children's cafeteria spending, removes cash from the lunch line, and gives schools an offline-tolerant point of sale. This document is layered: an executive narrative up top, deep technical architecture below, structured around the <b>C4 model</b>.</p>
+  <div class="pillrow">
+    <span class="pill"><b>Cloud</b> · Google Cloud (GKE)</span>
+    <span class="pill"><b>Services</b> · Go microservices</span>
+    <span class="pill"><b>Tenancy</b> · Shared schema · Row-Level Security</span>
+    <span class="pill"><b>IDM</b> · Keycloak</span>
+    <span class="pill"><b>POS</b> · Offline-first · BYOD</span>
+    <span class="pill"><b>Billing</b> · Subscription + usage</span>
+    <span class="pill"><b>Local</b> · one command</span>
+  </div>
+</div>
+
+<!-- ================= EXEC SUMMARY ================= -->
+<h2 id="summary"><span class="n">01</span>Executive Summary</h2>
+<p class="lead">SnackPay replaces cash in the school cafeteria with a prepaid, parent-controlled digital wallet tied to each child. Parents top up an account, pre-order meals, and see exactly what their child buys — in real time. Schools get a fast, mistake-free, queue-reducing point of sale that keeps working even when the internet drops.</p>
+
+<div class="grid3">
+  <div class="kpi"><div class="big">0</div><div class="lab">cash handled at the counter — eliminates change errors &amp; bullying over money</div></div>
+  <div class="kpi"><div class="big">&lt;3s</div><div class="lab">target POS transaction time via QR scan + pre-authorised wallet</div></div>
+  <div class="kpi"><div class="big">100%</div><div class="lab">parent visibility into every purchase, with per-item history</div></div>
+</div>
+
+<p>The business model is <b>B2B2C SaaS</b>: schools (tenants) subscribe; parents and cafeteria staff are the end users. A single platform instance serves many schools securely via row-level tenant isolation. Phase 1 delivers the web/PWA experiences, the offline-capable POS, the wallet ledger, QR issuance, and subscription billing. The native <b>mobile app is deferred to Phase 2</b>; for now, parent notifications and WhatsApp messages are <b>simulated</b> through a pluggable notification gateway so the product can be demonstrated end-to-end without third-party costs or approvals.</p>
+
+<div class="callout info"><b>Reading guide.</b> Sections 01–04 are for everyone (stakeholders &amp; engineers). Sections 05–08 (C4 &amp; flows) suit both audiences. Sections 09+ are engineering deep dives — data model, offline sync algorithm, QR, billing, security, and local dev.</div>
+
+<!-- ================= PROBLEM/SOLUTION ================= -->
+<h2 id="problem"><span class="n">02</span>Problem &amp; Solution</h2>
+<div class="grid2">
+  <div class="card">
+    <h4 style="color:var(--danger)">Today's Pain</h4>
+    <ul class="clean">
+      <li>Parents forget to send money; children go without.</li>
+      <li>Reluctance to hand young children cash for fear of loss.</li>
+      <li>Change mistakes pile up during the interval &amp; lunch rush.</li>
+      <li>Manual handling creates long queues and lost class time.</li>
+      <li>Parents have zero visibility into what's actually bought.</li>
+      <li>Cash handling exposes children to bullying and coercion.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4 style="color:var(--ok)">SnackPay Delivers</h4>
+    <ul class="clean">
+      <li>Pre-order interval/lunch from a phone or browser.</li>
+      <li>Top up any time at the cafeteria counter.</li>
+      <li>Live view of every item a child purchases.</li>
+      <li>Running balance + full top-up and order history.</li>
+      <li>A QR card replaces cash — nothing to steal or lose value from.</li>
+      <li>Fast scan-and-go line that keeps flowing offline.</li>
+    </ul>
+  </div>
+</div>
+
+<h3>The core loop, told plainly</h3>
+<p>A parent visits the cafeteria and tops up their child's account; the cashier records it and the child receives a <b>QR card</b>. The top-up appears instantly in the parent's app. The parent browses the menu and, if they wish, pre-orders the child's interval or lunch. During the school day the child presents the card; the cashier scans it, hands over the item, and marks it delivered. The parent sees "delivered," the item's price moves from the child's <b>prepaid wallet</b> into the cafeteria's account, and the purchase lands in the child's history. Every step is an event the platform records, reconciles, and can replay.</p>
+
+<!-- ================= DECISIONS ================= -->
+<h2 id="decisions"><span class="n">03</span>Key Architecture Decisions</h2>
+<p class="lead">Decisions that shape everything downstream, with the reasoning and the trade-off we accepted.</p>
+<table>
+  <thead><tr><th style="width:20%">Decision</th><th style="width:34%">Choice</th><th>Why / Trade-off</th></tr></thead>
+  <tbody>
+    <tr><td><b>Cloud</b></td><td>Google Cloud Platform — GKE, Cloud SQL (Postgres), Pub/Sub, GCS, Cloud Load Balancing</td><td>Managed Kubernetes + managed Postgres minimise ops. Everything also runs locally via one command (Docker Compose) so dev/test never needs the cloud.</td></tr>
+    <tr><td><b>Service language</b></td><td>Go (Golang) microservices</td><td>Small static binaries, fast cold start, excellent concurrency for POS/event workloads, tiny containers. Trade-off: more boilerplate than a batteries-included framework — mitigated with shared internal libraries.</td></tr>
+    <tr><td><b>Multi-tenancy</b></td><td>Shared schema, one Postgres, <b>row-level security</b> keyed by <code>tenant_id</code></td><td>Lowest cost &amp; simplest ops at school-scale volumes; a single migration path. Trade-off: weaker physical isolation — countered with DB-enforced RLS, tenant-scoped connections, and defence-in-depth (see §09).</td></tr>
+    <tr><td><b>Identity</b></td><td>Keycloak (OIDC/OAuth2) as the IDM, one realm per tenant</td><td>Open-source, self-hostable, realm-per-tenant gives clean user isolation, social/SSO ready, fine-grained roles. Trade-off: an extra stateful component to operate.</td></tr>
+    <tr><td><b>POS</b></td><td>Offline-first PWA on <b>BYOD</b> devices, local queue + sync</td><td>The line must never stop when Wi-Fi drops. BYOD avoids hardware capex. Trade-off: offline spending risk — bounded by signed offline balance snapshots &amp; limits (see §11).</td></tr>
+    <tr><td><b>Notifications</b></td><td>Pluggable gateway; WhatsApp/push <b>simulated</b> in Phase 1</td><td>Demonstrate the full experience with no vendor lock-in or approval delay; swap the simulator for Twilio/Meta later behind the same interface.</td></tr>
+    <tr><td><b>Mobile</b></td><td>Responsive PWA now; native app <b>Phase 2</b></td><td>One codebase reaches parents immediately; native follows once product-market fit is proven.</td></tr>
+    <tr><td><b>Billing</b></td><td>Subscription (per-tenant plan) + optional usage, internal billing service</td><td>Predictable school budgeting; usage metering ready for transaction-based tiers. Pluggable PSP adapter (Stripe-style) behind an interface.</td></tr>
+  </tbody>
+</table>
+
+<!-- ================= PRINCIPLES ================= -->
+<h2 id="principles"><span class="n">04</span>Guiding Principles &amp; Requirements</h2>
+<div class="grid2">
+  <div class="card"><h4>Architectural Principles</h4>
+    <ul class="clean">
+      <li><b>Money is sacred.</b> The wallet is an append-only, double-entry ledger — balances are derived, never edited in place.</li>
+      <li><b>The line never stops.</b> POS degrades gracefully offline and reconciles deterministically.</li>
+      <li><b>Tenant-safe by construction.</b> Every query is tenant-scoped at the database, not just the app.</li>
+      <li><b>Event-first.</b> Domain events are the source of truth for notifications, history, and reconciliation.</li>
+      <li><b>Swap-able edges.</b> Payments, notifications, and identity sit behind interfaces so vendors can change without core rewrites.</li>
+      <li><b>Runs on a laptop.</b> The entire system boots locally with one command.</li>
+    </ul>
+  </div>
+  <div class="card"><h4>Requirement Coverage</h4>
+    <ul class="clean">
+      <li>Multi-tenant SaaS on the cloud <span class="tag t-ok">§06 · §12</span></li>
+      <li>Keycloak IDM <span class="tag t-ok">§06 · §18</span></li>
+      <li>Basic subscription &amp; billing <span class="tag t-ok">§16</span></li>
+      <li>Mobile deferred to Phase 2 <span class="tag t-ok">§21</span></li>
+      <li>Simulated notifications / WhatsApp <span class="tag t-ok">§17</span></li>
+      <li>Offline support for school POS <span class="tag t-ok">§14</span></li>
+      <li>BYOD POS device <span class="tag t-ok">§14</span></li>
+      <li>QR printing <span class="tag t-ok">§15</span></li>
+    </ul>
+  </div>
+</div>
+
+<!-- ================= C4 L1 ================= -->
+<h2 id="c1"><span class="n">05</span>C4 · Level 1 — System Context</h2>
+<p class="lead">Who uses SnackPay and what it depends on. The platform is a single box here; people and external systems surround it.</p>
+
+<div class="fig">
+<svg viewBox="0 0 1000 620" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="System context diagram">
+  <defs>
+    <marker id="ar" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#7f8db0"/>
+    </marker>
+    <linearGradient id="gPerson" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0f4c86"/><stop offset="1" stop-color="#0a2c52"/>
+    </linearGradient>
+    <linearGradient id="gSys" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#7c5efc"/><stop offset="1" stop-color="#4f3fd6"/>
+    </linearGradient>
+    <linearGradient id="gExt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5b6577"/><stop offset="1" stop-color="#3c4453"/>
+    </linearGradient>
+    <filter id="sh" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000" flood-opacity="0.45"/>
+    </filter>
+  </defs>
+
+  <!-- People row -->
+  <g filter="url(#sh)">
+    <rect x="40"  y="30" width="200" height="96" rx="14" fill="url(#gPerson)" stroke="#2a6bb0"/>
+    <rect x="290" y="30" width="200" height="96" rx="14" fill="url(#gPerson)" stroke="#2a6bb0"/>
+    <rect x="540" y="30" width="200" height="96" rx="14" fill="url(#gPerson)" stroke="#2a6bb0"/>
+    <rect x="790" y="30" width="170" height="96" rx="14" fill="url(#gPerson)" stroke="#2a6bb0"/>
+  </g>
+  <text x="140" y="60" text-anchor="middle" fill="#dcecff" font-size="15" font-weight="700">Parent / Guardian</text>
+  <text x="140" y="82" text-anchor="middle" fill="#a9c6e8" font-size="11.5">Tops up, pre-orders,</text>
+  <text x="140" y="99" text-anchor="middle" fill="#a9c6e8" font-size="11.5">watches purchases</text>
+  <text x="390" y="60" text-anchor="middle" fill="#dcecff" font-size="15" font-weight="700">Cafeteria Cashier</text>
+  <text x="390" y="82" text-anchor="middle" fill="#a9c6e8" font-size="11.5">Records top-ups,</text>
+  <text x="390" y="99" text-anchor="middle" fill="#a9c6e8" font-size="11.5">scans, delivers</text>
+  <text x="640" y="60" text-anchor="middle" fill="#dcecff" font-size="15" font-weight="700">School Admin</text>
+  <text x="640" y="82" text-anchor="middle" fill="#a9c6e8" font-size="11.5">Manages menu,</text>
+  <text x="640" y="99" text-anchor="middle" fill="#a9c6e8" font-size="11.5">staff &amp; reports</text>
+  <text x="875" y="60" text-anchor="middle" fill="#dcecff" font-size="15" font-weight="700">Child</text>
+  <text x="875" y="82" text-anchor="middle" fill="#a9c6e8" font-size="11.5">Carries QR card,</text>
+  <text x="875" y="99" text-anchor="middle" fill="#a9c6e8" font-size="11.5">collects food</text>
+
+  <!-- Central system -->
+  <g filter="url(#sh)">
+    <rect x="300" y="250" width="400" height="130" rx="18" fill="url(#gSys)" stroke="#8f7bff"/>
+  </g>
+  <text x="500" y="298" text-anchor="middle" fill="#fff" font-size="21" font-weight="800">SnackPay Platform</text>
+  <text x="500" y="324" text-anchor="middle" fill="#e6e0ff" font-size="12.5">Multi-tenant SaaS — wallet, ordering,</text>
+  <text x="500" y="342" text-anchor="middle" fill="#e6e0ff" font-size="12.5">POS, QR, billing &amp; parent visibility</text>
+  <text x="500" y="364" text-anchor="middle" fill="#c9beff" font-size="11">[Software System · GKE]</text>
+
+  <!-- External systems row -->
+  <g filter="url(#sh)">
+    <rect x="60"  y="500" width="180" height="86" rx="14" fill="url(#gExt)" stroke="#6a748a"/>
+    <rect x="290" y="500" width="180" height="86" rx="14" fill="url(#gExt)" stroke="#6a748a"/>
+    <rect x="530" y="500" width="180" height="86" rx="14" fill="url(#gExt)" stroke="#6a748a"/>
+    <rect x="760" y="500" width="180" height="86" rx="14" fill="url(#gExt)" stroke="#6a748a"/>
+  </g>
+  <text x="150" y="533" text-anchor="middle" fill="#e7ecf5" font-size="13.5" font-weight="700">Keycloak IDM</text>
+  <text x="150" y="553" text-anchor="middle" fill="#b9c2d4" font-size="11">OIDC · realm/tenant</text>
+  <text x="150" y="570" text-anchor="middle" fill="#8b93a6" font-size="10.5">[External System]</text>
+  <text x="380" y="533" text-anchor="middle" fill="#e7ecf5" font-size="13.5" font-weight="700">Payment PSP</text>
+  <text x="380" y="553" text-anchor="middle" fill="#b9c2d4" font-size="11">Subscription charges</text>
+  <text x="380" y="570" text-anchor="middle" fill="#8b93a6" font-size="10.5">[External · adapter]</text>
+  <text x="620" y="533" text-anchor="middle" fill="#e7ecf5" font-size="13.5" font-weight="700">WhatsApp / Push</text>
+  <text x="620" y="553" text-anchor="middle" fill="#fbcf8a" font-size="11">SIMULATED (Phase 1)</text>
+  <text x="620" y="570" text-anchor="middle" fill="#8b93a6" font-size="10.5">[External · stub]</text>
+  <text x="850" y="533" text-anchor="middle" fill="#e7ecf5" font-size="13.5" font-weight="700">QR Card Printer</text>
+  <text x="850" y="553" text-anchor="middle" fill="#b9c2d4" font-size="11">Thermal / label</text>
+  <text x="850" y="570" text-anchor="middle" fill="#8b93a6" font-size="10.5">[External Device]</text>
+
+  <!-- Edges people->system -->
+  <g stroke="#7f8db0" stroke-width="1.6" fill="none" marker-end="url(#ar)">
+    <path d="M140,126 C140,200 350,210 400,248"/>
+    <path d="M390,126 C390,180 430,200 460,248"/>
+    <path d="M640,126 C640,180 560,205 545,248"/>
+    <path d="M875,126 C875,210 690,235 620,270"/>
+  </g>
+  <!-- Edges system->external -->
+  <g stroke="#7f8db0" stroke-width="1.6" fill="none" marker-end="url(#ar)">
+    <path d="M360,380 C300,430 220,460 175,498"/>
+    <path d="M430,380 C410,430 395,460 385,498"/>
+    <path d="M560,380 C585,430 605,460 618,498"/>
+    <path d="M640,380 C720,430 800,460 842,498"/>
+  </g>
+  <!-- edge labels -->
+  <text x="250" y="200" fill="#8ea0c6" font-size="10.5">HTTPS · PWA</text>
+  <text x="700" y="205" fill="#8ea0c6" font-size="10.5">carries QR</text>
+  <text x="215" y="452" fill="#8ea0c6" font-size="10.5">authenticates</text>
+  <text x="600" y="452" fill="#8ea0c6" font-size="10.5">notifies (sim)</text>
+</svg>
+<div class="legend">
+  <span><i style="background:#0f4c86"></i>Person</span>
+  <span><i style="background:#7c5efc"></i>SnackPay (our system)</span>
+  <span><i style="background:#5b6577"></i>External system / device</span>
+</div>
+<div class="cap">Figure 1 — System Context. Four human roles interact with one SnackPay system, which depends on Keycloak for identity, a PSP for subscription charges, a (simulated) messaging gateway, and QR printers.</div>
+</div>
+
+<!-- ================= C4 L2 ================= -->
+<h2 id="c2"><span class="n">06</span>C4 · Level 2 — Containers</h2>
+<p class="lead">Inside the SnackPay box: the deployable/ runnable units — front ends, the API edge, Go microservices, the event backbone, and stores.</p>
+
+<div class="fig">
+<svg viewBox="0 0 1040 860" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Container diagram">
+  <defs>
+    <marker id="ar2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#7f8db0"/></marker>
+    <linearGradient id="gCli" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0f4c86"/><stop offset="1" stop-color="#0a2c52"/></linearGradient>
+    <linearGradient id="gEdge" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0e9488"/><stop offset="1" stop-color="#0b6d64"/></linearGradient>
+    <linearGradient id="gSvc" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3aa0ff"/><stop offset="1" stop-color="#2470c4"/></linearGradient>
+    <linearGradient id="gBus" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f472b6"/><stop offset="1" stop-color="#c43d86"/></linearGradient>
+    <linearGradient id="gData" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8b6dff"/><stop offset="1" stop-color="#5f45d6"/></linearGradient>
+    <linearGradient id="gExt2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5b6577"/><stop offset="1" stop-color="#3c4453"/></linearGradient>
+    <filter id="sh2" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="5" stdDeviation="7" flood-color="#000" flood-opacity="0.42"/></filter>
+  </defs>
+
+  <!-- Clients -->
+  <text x="30" y="34" fill="#7f8db0" font-size="12" font-weight="700" letter-spacing="1">CLIENTS</text>
+  <g filter="url(#sh2)">
+    <rect x="30" y="46" width="180" height="74" rx="12" fill="url(#gCli)" stroke="#2a6bb0"/>
+    <rect x="230" y="46" width="180" height="74" rx="12" fill="url(#gCli)" stroke="#2a6bb0"/>
+    <rect x="430" y="46" width="200" height="74" rx="12" fill="url(#gCli)" stroke="#2a6bb0"/>
+  </g>
+  <text x="120" y="76" text-anchor="middle" fill="#dcecff" font-size="13.5" font-weight="700">Parent Web / PWA</text>
+  <text x="120" y="96" text-anchor="middle" fill="#a9c6e8" font-size="10.5">React · deferred native P2</text>
+  <text x="320" y="76" text-anchor="middle" fill="#dcecff" font-size="13.5" font-weight="700">Admin Console</text>
+  <text x="320" y="96" text-anchor="middle" fill="#a9c6e8" font-size="10.5">React (SPA)</text>
+  <text x="530" y="70" text-anchor="middle" fill="#dcecff" font-size="13.5" font-weight="700">Cafeteria POS</text>
+  <text x="530" y="88" text-anchor="middle" fill="#fbcf8a" font-size="10.5">Offline-first PWA · BYOD</text>
+  <text x="530" y="105" text-anchor="middle" fill="#a9c6e8" font-size="10">IndexedDB queue + SW</text>
+
+  <!-- Identity external -->
+  <g filter="url(#sh2)"><rect x="820" y="46" width="190" height="74" rx="12" fill="url(#gExt2)" stroke="#6a748a"/></g>
+  <text x="915" y="76" text-anchor="middle" fill="#e7ecf5" font-size="13.5" font-weight="700">Keycloak</text>
+  <text x="915" y="96" text-anchor="middle" fill="#b9c2d4" font-size="10.5">OIDC · realm-per-tenant</text>
+
+  <!-- Edge -->
+  <text x="30" y="176" fill="#7f8db0" font-size="12" font-weight="700" letter-spacing="1">EDGE</text>
+  <g filter="url(#sh2)"><rect x="330" y="186" width="360" height="66" rx="12" fill="url(#gEdge)" stroke="#14b8a6"/></g>
+  <text x="510" y="214" text-anchor="middle" fill="#eafffb" font-size="14.5" font-weight="800">API Gateway / BFF</text>
+  <text x="510" y="234" text-anchor="middle" fill="#bff3ec" font-size="10.5">TLS · JWT validation · tenant resolution · rate limit</text>
+
+  <!-- Services -->
+  <text x="30" y="300" fill="#7f8db0" font-size="12" font-weight="700" letter-spacing="1">GO MICROSERVICES</text>
+  <g filter="url(#sh2)">
+    <rect x="30"  y="316" width="176" height="80" rx="12" fill="url(#gSvc)" stroke="#3aa0ff"/>
+    <rect x="222" y="316" width="176" height="80" rx="12" fill="url(#gSvc)" stroke="#3aa0ff"/>
+    <rect x="414" y="316" width="176" height="80" rx="12" fill="url(#gSvc)" stroke="#3aa0ff"/>
+    <rect x="606" y="316" width="176" height="80" rx="12" fill="url(#gSvc)" stroke="#3aa0ff"/>
+    <rect x="798" y="316" width="212" height="80" rx="12" fill="url(#gSvc)" stroke="#3aa0ff"/>
+    <rect x="126" y="418" width="176" height="80" rx="12" fill="url(#gSvc)" stroke="#3aa0ff"/>
+    <rect x="318" y="418" width="176" height="80" rx="12" fill="url(#gSvc)" stroke="#3aa0ff"/>
+    <rect x="510" y="418" width="176" height="80" rx="12" fill="url(#gSvc)" stroke="#3aa0ff"/>
+    <rect x="702" y="418" width="176" height="80" rx="12" fill="url(#gSvc)" stroke="#3aa0ff"/>
+  </g>
+  <g font-size="12.5" font-weight="700" fill="#eaf4ff" text-anchor="middle">
+    <text x="118" y="348">Identity/Tenant</text>
+    <text x="310" y="348">Wallet / Ledger</text>
+    <text x="502" y="348">Ordering</text>
+    <text x="694" y="348">POS &amp; Sync</text>
+    <text x="904" y="348">Catalog / Menu</text>
+    <text x="214" y="450">QR Service</text>
+    <text x="406" y="450">Billing/Subscription</text>
+    <text x="598" y="450">Notification GW</text>
+    <text x="790" y="450">Reporting</text>
+  </g>
+  <g font-size="10" fill="#cfe4ff" text-anchor="middle">
+    <text x="118" y="368">tenants, roles,</text><text x="118" y="382">KC sync</text>
+    <text x="310" y="368">double-entry,</text><text x="310" y="382">balances</text>
+    <text x="502" y="368">pre-orders,</text><text x="502" y="382">state machine</text>
+    <text x="694" y="368">offline recon,</text><text x="694" y="382">idempotency</text>
+    <text x="904" y="368">items, prices,</text><text x="904" y="382">availability</text>
+    <text x="214" y="470">issue/verify</text>
+    <text x="406" y="470">plans, invoices</text>
+    <text x="598" y="470">sim WhatsApp/push</text>
+    <text x="790" y="470">history, exports</text>
+  </g>
+
+  <!-- Event bus -->
+  <g filter="url(#sh2)"><rect x="126" y="536" width="752" height="52" rx="12" fill="url(#gBus)" stroke="#f472b6"/></g>
+  <text x="502" y="567" text-anchor="middle" fill="#fff" font-size="14" font-weight="800">Event Backbone — Cloud Pub/Sub (local: Redpanda/NATS)</text>
+
+  <!-- Data stores -->
+  <text x="30" y="628" fill="#7f8db0" font-size="12" font-weight="700" letter-spacing="1">STATE</text>
+  <g filter="url(#sh2)">
+    <rect x="126" y="640" width="210" height="88" rx="12" fill="url(#gData)" stroke="#8b6dff"/>
+    <rect x="360" y="640" width="200" height="88" rx="12" fill="url(#gData)" stroke="#8b6dff"/>
+    <rect x="584" y="640" width="190" height="88" rx="12" fill="url(#gData)" stroke="#8b6dff"/>
+    <rect x="798" y="640" width="212" height="88" rx="12" fill="url(#gExt2)" stroke="#6a748a"/>
+  </g>
+  <text x="231" y="676" text-anchor="middle" fill="#efeaff" font-size="13.5" font-weight="700">Cloud SQL · Postgres</text>
+  <text x="231" y="697" text-anchor="middle" fill="#d3c8ff" font-size="10.5">shared schema · RLS</text>
+  <text x="231" y="713" text-anchor="middle" fill="#d3c8ff" font-size="10.5">by tenant_id</text>
+  <text x="460" y="676" text-anchor="middle" fill="#efeaff" font-size="13.5" font-weight="700">Redis</text>
+  <text x="460" y="697" text-anchor="middle" fill="#d3c8ff" font-size="10.5">cache · sessions ·</text>
+  <text x="460" y="713" text-anchor="middle" fill="#d3c8ff" font-size="10.5">idempotency keys</text>
+  <text x="679" y="676" text-anchor="middle" fill="#efeaff" font-size="13.5" font-weight="700">GCS / Object</text>
+  <text x="679" y="697" text-anchor="middle" fill="#d3c8ff" font-size="10.5">QR assets, exports,</text>
+  <text x="679" y="713" text-anchor="middle" fill="#d3c8ff" font-size="10.5">receipts</text>
+  <text x="904" y="676" text-anchor="middle" fill="#e7ecf5" font-size="13.5" font-weight="700">Payment PSP</text>
+  <text x="904" y="697" text-anchor="middle" fill="#b9c2d4" font-size="10.5">Stripe-style adapter</text>
+  <text x="904" y="713" text-anchor="middle" fill="#b9c2d4" font-size="10.5">[External]</text>
+
+  <!-- Edges clients->edge -->
+  <g stroke="#7f8db0" stroke-width="1.5" fill="none" marker-end="url(#ar2)">
+    <path d="M120,120 C120,160 360,165 420,184"/>
+    <path d="M320,120 C320,155 470,160 500,184"/>
+    <path d="M530,120 C530,150 560,160 570,184"/>
+    <!-- edge->keycloak -->
+    <path d="M690,206 C780,190 800,140 840,122" stroke-dasharray="5 4"/>
+    <!-- edge->services -->
+    <path d="M430,252 C300,280 180,290 130,314"/>
+    <path d="M470,252 C400,285 340,295 312,314"/>
+    <path d="M510,252 L502,314"/>
+    <path d="M560,252 C640,285 680,295 700,314"/>
+    <path d="M620,252 C760,280 860,290 900,314"/>
+  </g>
+  <!-- services<->bus (representative) -->
+  <g stroke="#c25a94" stroke-width="1.4" fill="none" marker-end="url(#ar2)" opacity="0.9">
+    <path d="M310,396 L360,534"/>
+    <path d="M502,396 L502,534"/>
+    <path d="M598,498 L560,538"/>
+    <path d="M406,498 L440,534"/>
+    <path d="M790,498 C740,515 700,525 660,538"/>
+  </g>
+  <!-- services->db (representative) -->
+  <g stroke="#7b62d6" stroke-width="1.4" fill="none" marker-end="url(#ar2)" opacity="0.9">
+    <path d="M231,588 L231,638"/>
+    <path d="M406,498 C380,560 320,610 300,638"/>
+    <path d="M598,498 C560,560 500,610 470,638"/>
+  </g>
+  <text x="905" y="360" fill="#0b2e57" font-size="9"> </text>
+</svg>
+<div class="legend">
+  <span><i style="background:#0f4c86"></i>Client app</span>
+  <span><i style="background:#0e9488"></i>API edge</span>
+  <span><i style="background:#3aa0ff"></i>Go microservice</span>
+  <span><i style="background:#f472b6"></i>Event backbone</span>
+  <span><i style="background:#8b6dff"></i>Datastore</span>
+  <span><i style="background:#5b6577"></i>External</span>
+</div>
+<div class="cap">Figure 2 — Containers. Clients hit an API gateway/BFF that validates Keycloak JWTs and resolves the tenant. Nine Go services own bounded contexts, communicate synchronously via the gateway and asynchronously over Pub/Sub, and share one RLS-protected Postgres.</div>
+</div>
+
+<h3>Container responsibilities</h3>
+<table>
+  <thead><tr><th style="width:22%">Container</th><th style="width:12%">Type</th><th>Responsibility</th></tr></thead>
+  <tbody>
+    <tr><td>Parent Web / PWA</td><td>React SPA</td><td>Top-up view, menu browse, pre-order, live purchase feed, balance &amp; history. Native app in Phase 2.</td></tr>
+    <tr><td>Cafeteria POS</td><td>Offline-first PWA</td><td>QR scan, deliver items, record counter top-ups; queues transactions in IndexedDB and syncs when online. Runs on staff BYOD.</td></tr>
+    <tr><td>Admin Console</td><td>React SPA</td><td>Menu &amp; pricing, staff/roles, QR card issuance, subscription &amp; reports.</td></tr>
+    <tr><td>API Gateway / BFF</td><td>Go</td><td>TLS termination, JWT validation against Keycloak, <b>tenant resolution</b>, rate limiting, request routing, aggregation for clients.</td></tr>
+    <tr><td>Identity / Tenant</td><td>Go</td><td>Tenant lifecycle, Keycloak realm/user provisioning, role mapping, parent↔child links.</td></tr>
+    <tr><td>Wallet / Ledger</td><td>Go</td><td>Append-only <b>double-entry</b> ledger; derives balances; enforces sufficient-funds; idempotent postings.</td></tr>
+    <tr><td>Ordering</td><td>Go</td><td>Pre-order lifecycle state machine (placed → ready → delivered/cancelled), links to wallet holds.</td></tr>
+    <tr><td>POS &amp; Sync</td><td>Go</td><td>Server side of offline sync — idempotent replay, conflict resolution, signed offline snapshots.</td></tr>
+    <tr><td>Catalog / Menu</td><td>Go</td><td>Items, prices, availability windows (interval/lunch), per-tenant menus.</td></tr>
+    <tr><td>QR Service</td><td>Go</td><td>Issues signed QR tokens, binds card↔child, verifies scans, supports reissue/revoke, generates printable assets.</td></tr>
+    <tr><td>Billing / Subscription</td><td>Go</td><td>Plans, subscriptions, usage metering, invoice generation, PSP adapter, dunning.</td></tr>
+    <tr><td>Notification Gateway</td><td>Go</td><td>Fan-out of domain events to channels; Phase 1 <b>simulates</b> WhatsApp/push and records "sent" messages.</td></tr>
+    <tr><td>Reporting</td><td>Go</td><td>Purchase history, exports, tenant dashboards (read models built from events).</td></tr>
+  </tbody>
+</table>
+
+<!-- ================= C4 L3 ================= -->
+<h2 id="c3"><span class="n">07</span>C4 · Level 3 — Components (Wallet / Ledger)</h2>
+<p class="lead">Zooming into the most safety-critical service. The ledger never mutates a balance; it appends double-entry postings and derives balances, guaranteeing money can always be reconciled.</p>
+
+<div class="fig">
+<svg viewBox="0 0 1000 560" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Wallet ledger component diagram">
+  <defs>
+    <marker id="ar3" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#7f8db0"/></marker>
+    <linearGradient id="gCmp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#93c5fd"/><stop offset="1" stop-color="#5b9cf0"/></linearGradient>
+    <linearGradient id="gCmp2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7c5efc"/><stop offset="1" stop-color="#5a45d0"/></linearGradient>
+    <filter id="sh3" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.4"/></filter>
+  </defs>
+
+  <!-- boundary -->
+  <rect x="150" y="40" width="700" height="380" rx="18" fill="none" stroke="#3f4f74" stroke-dasharray="7 6"/>
+  <text x="170" y="66" fill="#8ea0c6" font-size="12.5" font-weight="700">Wallet / Ledger Service [Go]</text>
+
+  <!-- inbound -->
+  <g filter="url(#sh3)"><rect x="20" y="180" width="110" height="70" rx="12" fill="url(#gCmp2)" stroke="#8f7bff"/></g>
+  <text x="75" y="210" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">API GW</text>
+  <text x="75" y="228" text-anchor="middle" fill="#ded6ff" font-size="10">/ POS·Sync</text>
+
+  <!-- components -->
+  <g filter="url(#sh3)">
+    <rect x="190" y="90"  width="180" height="72" rx="12" fill="url(#gCmp)" stroke="#3aa0ff"/>
+    <rect x="410" y="90"  width="180" height="72" rx="12" fill="url(#gCmp)" stroke="#3aa0ff"/>
+    <rect x="630" y="90"  width="190" height="72" rx="12" fill="url(#gCmp)" stroke="#3aa0ff"/>
+    <rect x="190" y="200" width="180" height="72" rx="12" fill="url(#gCmp)" stroke="#3aa0ff"/>
+    <rect x="410" y="200" width="180" height="72" rx="12" fill="url(#gCmp)" stroke="#3aa0ff"/>
+    <rect x="630" y="200" width="190" height="72" rx="12" fill="url(#gCmp)" stroke="#3aa0ff"/>
+    <rect x="300" y="315" width="180" height="72" rx="12" fill="url(#gCmp)" stroke="#3aa0ff"/>
+    <rect x="520" y="315" width="200" height="72" rx="12" fill="url(#gCmp)" stroke="#3aa0ff"/>
+  </g>
+  <g text-anchor="middle" font-weight="700" fill="#0a2c52" font-size="12.5">
+    <text x="280" y="120">Posting Handler</text>
+    <text x="500" y="120">Idempotency Guard</text>
+    <text x="725" y="120">Funds Policy</text>
+    <text x="280" y="230">Ledger Repository</text>
+    <text x="500" y="230">Balance Projector</text>
+    <text x="725" y="230">Hold Manager</text>
+    <text x="390" y="345">Event Publisher</text>
+    <text x="620" y="345">Reconciliation Job</text>
+  </g>
+  <g text-anchor="middle" fill="#123a68" font-size="9.5">
+    <text x="280" y="138">validates &amp; records</text>
+    <text x="500" y="138">dedupe by key</text>
+    <text x="725" y="138">sufficient-funds, limits</text>
+    <text x="280" y="248">append-only entries</text>
+    <text x="500" y="248">derives cached balance</text>
+    <text x="725" y="248">pre-order reservations</text>
+    <text x="390" y="363">wallet.* events</text>
+    <text x="620" y="363">nightly + on-demand</text>
+  </g>
+
+  <!-- stores -->
+  <g filter="url(#sh3)">
+    <rect x="360" y="450" width="150" height="70" rx="12" fill="url(#gCmp2)" stroke="#8f7bff"/>
+    <rect x="540" y="450" width="130" height="70" rx="12" fill="url(#gCmp2)" stroke="#8f7bff"/>
+    <rect x="700" y="450" width="150" height="70" rx="12" fill="#4b5568" stroke="#6a748a"/>
+  </g>
+  <text x="435" y="480" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">Postgres (RLS)</text>
+  <text x="435" y="498" text-anchor="middle" fill="#ded6ff" font-size="10">ledger_entry, account</text>
+  <text x="605" y="480" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">Redis</text>
+  <text x="605" y="498" text-anchor="middle" fill="#ded6ff" font-size="10">idempotency, balance</text>
+  <text x="775" y="480" text-anchor="middle" fill="#e7ecf5" font-size="12" font-weight="700">Pub/Sub</text>
+  <text x="775" y="498" text-anchor="middle" fill="#c3cad8" font-size="10">wallet events</text>
+
+  <g stroke="#7f8db0" stroke-width="1.5" fill="none" marker-end="url(#ar3)">
+    <path d="M130,205 C155,150 165,135 188,126"/>
+    <path d="M370,126 L408,126"/>
+    <path d="M590,126 L628,126"/>
+    <path d="M280,162 L280,198"/>
+    <path d="M500,162 L500,198"/>
+    <path d="M370,236 L408,236"/>
+    <path d="M280,272 C300,300 320,308 340,313"/>
+    <path d="M500,272 C520,300 560,308 590,313"/>
+    <path d="M390,387 C410,415 425,435 435,448"/>
+    <path d="M300,236 C250,300 320,420 420,448" opacity="0.5"/>
+    <path d="M620,387 L610,448"/>
+    <path d="M500,272 C560,320 640,420 720,448" opacity="0.5"/>
+  </g>
+</svg>
+<div class="legend">
+  <span><i style="background:#93c5fd"></i>Component (in-process)</span>
+  <span><i style="background:#7c5efc"></i>Owned store / bus</span>
+  <span><i style="background:#4b5568"></i>Shared infrastructure</span>
+</div>
+<div class="cap">Figure 3 — Components of the Wallet/Ledger service. A posting request is deduped (Idempotency Guard), checked (Funds Policy), appended (Ledger Repository), reflected in a cached balance (Balance Projector), and announced (Event Publisher). Holds back pre-orders; a Reconciliation Job proves the books.</div>
+</div>
+
+<div class="callout"><b>Why double-entry?</b> Every transaction writes two rows — a debit and a credit — that must sum to zero across accounts (child wallet, cafeteria account, top-up source). Balances are a projection over entries, so a corrupted cache can always be rebuilt, and every cent is auditable per tenant.</div>
+
+<!-- ================= DEPLOYMENT ================= -->
+<h2 id="deploy"><span class="n">08</span>Deployment — Google Cloud</h2>
+<p class="lead">Production runs on GKE inside a single project per environment. The same container images run locally via Docker Compose (see §15), so dev/prod parity is high.</p>
+
+<div class="fig">
+<svg viewBox="0 0 1020 640" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="GCP deployment diagram">
+  <defs>
+    <marker id="ar4" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#7f8db0"/></marker>
+    <linearGradient id="gNode" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b2540"/><stop offset="1" stop-color="#141b2d"/></linearGradient>
+    <linearGradient id="gPod" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3aa0ff"/><stop offset="1" stop-color="#2470c4"/></linearGradient>
+    <linearGradient id="gMan" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8b6dff"/><stop offset="1" stop-color="#5f45d6"/></linearGradient>
+    <filter id="sh5" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.4"/></filter>
+  </defs>
+
+  <!-- internet -->
+  <g filter="url(#sh5)"><rect x="40" y="40" width="150" height="60" rx="12" fill="#0a2c52" stroke="#2a6bb0"/></g>
+  <text x="115" y="66" text-anchor="middle" fill="#dcecff" font-size="12" font-weight="700">Users / BYOD</text>
+  <text x="115" y="84" text-anchor="middle" fill="#a9c6e8" font-size="10">browsers · POS</text>
+
+  <!-- GCP boundary -->
+  <rect x="240" y="24" width="756" height="590" rx="18" fill="none" stroke="#3f7bd6" stroke-dasharray="8 6"/>
+  <text x="260" y="48" fill="#7fa9e8" font-size="12.5" font-weight="700">Google Cloud Project · region europe/asia</text>
+
+  <!-- Global LB + Armor -->
+  <g filter="url(#sh5)"><rect x="270" y="66" width="200" height="60" rx="12" fill="#0e9488" stroke="#14b8a6"/></g>
+  <text x="370" y="92" text-anchor="middle" fill="#eafffb" font-size="12.5" font-weight="700">Cloud Load Balancer</text>
+  <text x="370" y="110" text-anchor="middle" fill="#bff3ec" font-size="10">HTTPS · Cloud Armor (WAF)</text>
+
+  <!-- Keycloak / Cloud SQL managed -->
+  <g filter="url(#sh5)"><rect x="520" y="66" width="210" height="60" rx="12" fill="url(#gMan)" stroke="#8b6dff"/></g>
+  <text x="625" y="92" text-anchor="middle" fill="#fff" font-size="12.5" font-weight="700">Keycloak (GKE StatefulSet)</text>
+  <text x="625" y="110" text-anchor="middle" fill="#ded6ff" font-size="10">realm per tenant</text>
+
+  <!-- GKE cluster -->
+  <rect x="270" y="150" width="460" height="330" rx="14" fill="url(#gNode)" stroke="#2d5aa0"/>
+  <text x="290" y="176" fill="#8fb6f0" font-size="12" font-weight="700">GKE Cluster (regional, autoscaling node pools)</text>
+
+  <!-- namespace edge -->
+  <g filter="url(#sh5)"><rect x="292" y="192" width="180" height="52" rx="10" fill="#0e9488" stroke="#14b8a6"/></g>
+  <text x="382" y="216" text-anchor="middle" fill="#eafffb" font-size="12" font-weight="700">Ingress / API GW</text>
+  <text x="382" y="233" text-anchor="middle" fill="#bff3ec" font-size="9.5">NGINX / Gateway API</text>
+
+  <!-- service pods grid -->
+  <g filter="url(#sh5)">
+    <rect x="292" y="262" width="130" height="46" rx="9" fill="url(#gPod)"/>
+    <rect x="432" y="262" width="130" height="46" rx="9" fill="url(#gPod)"/>
+    <rect x="572" y="262" width="140" height="46" rx="9" fill="url(#gPod)"/>
+    <rect x="292" y="320" width="130" height="46" rx="9" fill="url(#gPod)"/>
+    <rect x="432" y="320" width="130" height="46" rx="9" fill="url(#gPod)"/>
+    <rect x="572" y="320" width="140" height="46" rx="9" fill="url(#gPod)"/>
+    <rect x="292" y="378" width="130" height="46" rx="9" fill="url(#gPod)"/>
+    <rect x="432" y="378" width="130" height="46" rx="9" fill="url(#gPod)"/>
+    <rect x="572" y="378" width="140" height="46" rx="9" fill="url(#gPod)"/>
+  </g>
+  <g text-anchor="middle" fill="#eaf4ff" font-size="10.5" font-weight="700">
+    <text x="357" y="290">Wallet</text><text x="497" y="290">Ordering</text><text x="642" y="290">POS·Sync</text>
+    <text x="357" y="348">Catalog</text><text x="497" y="348">QR</text><text x="642" y="348">Billing</text>
+    <text x="357" y="406">Identity</text><text x="497" y="406">Notify</text><text x="642" y="406">Reporting</text>
+  </g>
+  <text x="500" y="452" text-anchor="middle" fill="#7fa9e8" font-size="10">HPA-scaled Deployments · one image set, all tenants</text>
+
+  <!-- managed data services -->
+  <g filter="url(#sh5)">
+    <rect x="770" y="170" width="200" height="66" rx="12" fill="url(#gMan)" stroke="#8b6dff"/>
+    <rect x="770" y="252" width="200" height="60" rx="12" fill="url(#gMan)" stroke="#8b6dff"/>
+    <rect x="770" y="326" width="200" height="60" rx="12" fill="url(#gMan)" stroke="#8b6dff"/>
+    <rect x="770" y="400" width="200" height="60" rx="12" fill="url(#gMan)" stroke="#8b6dff"/>
+    <rect x="770" y="474" width="200" height="60" rx="12" fill="#334" stroke="#6a748a"/>
+  </g>
+  <text x="870" y="198" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">Cloud SQL — Postgres</text>
+  <text x="870" y="216" text-anchor="middle" fill="#ded6ff" font-size="9.5">HA · PITR · RLS schema</text>
+  <text x="870" y="278" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">Memorystore (Redis)</text>
+  <text x="870" y="296" text-anchor="middle" fill="#ded6ff" font-size="9.5">cache · idempotency</text>
+  <text x="870" y="352" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">Cloud Pub/Sub</text>
+  <text x="870" y="370" text-anchor="middle" fill="#ded6ff" font-size="9.5">domain events</text>
+  <text x="870" y="426" text-anchor="middle" fill="#fff" font-size="12" font-weight="700">Cloud Storage</text>
+  <text x="870" y="444" text-anchor="middle" fill="#ded6ff" font-size="9.5">QR assets · exports</text>
+  <text x="870" y="500" text-anchor="middle" fill="#e7ecf5" font-size="12" font-weight="700">Payment PSP</text>
+  <text x="870" y="518" text-anchor="middle" fill="#c3cad8" font-size="9.5">external · adapter</text>
+
+  <!-- observability strip -->
+  <g filter="url(#sh5)"><rect x="270" y="500" width="460" height="46" rx="10" fill="#141b2d" stroke="#2d5aa0"/></g>
+  <text x="500" y="528" text-anchor="middle" fill="#9fb6e0" font-size="11">Observability — Cloud Logging · Monitoring · Trace · Prometheus / Grafana · Secret Manager · Artifact Registry</text>
+
+  <!-- edges -->
+  <g stroke="#7f8db0" stroke-width="1.6" fill="none" marker-end="url(#ar4)">
+    <path d="M190,70 C230,80 250,88 268,92"/>
+    <path d="M370,126 L382,190"/>
+    <path d="M382,244 L357,260"/>
+    <path d="M712,285 C740,250 750,215 768,205"/>
+    <path d="M712,343 L768,300"/>
+    <path d="M712,401 C740,395 750,375 768,360"/>
+    <path d="M712,300 C740,420 760,450 768,470" opacity="0.5"/>
+    <path d="M470,96 C500,96 500,96 518,96"/>
+  </g>
+</svg>
+<div class="legend">
+  <span><i style="background:#0e9488"></i>Edge / LB</span>
+  <span><i style="background:#3aa0ff"></i>Service pod (GKE)</span>
+  <span><i style="background:#8b6dff"></i>Managed GCP data service</span>
+  <span><i style="background:#334455"></i>External</span>
+</div>
+<div class="cap">Figure 4 — GCP deployment. A global HTTPS load balancer with Cloud Armor fronts a regional GKE cluster running all Go services as autoscaled Deployments. Stateful concerns are managed services: Cloud SQL (Postgres+RLS), Memorystore, Pub/Sub, GCS. Keycloak runs as a StatefulSet. CI publishes to Artifact Registry; secrets in Secret Manager.</div>
+</div>
+
+<!-- ================= FLOW TOPUP ================= -->
+<h2 id="flow-topup"><span class="n">09</span>Runtime Flow — Counter Top-up</h2>
+<p class="lead">Parent pays cash at the counter; the child's wallet is credited and the parent sees it "instantly" (event-driven).</p>
+
+<div class="fig">
+<svg viewBox="0 0 1000 470" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Top-up sequence">
+  <defs>
+    <marker id="sa" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#22d3ee"/></marker>
+    <marker id="sar" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#f472b6"/></marker>
+    <filter id="shs" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#000" flood-opacity="0.4"/></filter>
+  </defs>
+  <!-- lifelines -->
+  <g font-size="11.5" font-weight="700" text-anchor="middle">
+    <g filter="url(#shs)">
+      <rect x="20"  y="20" width="140" height="42" rx="9" fill="#0a2c52" stroke="#2a6bb0"/>
+      <rect x="200" y="20" width="150" height="42" rx="9" fill="#0a2c52" stroke="#2a6bb0"/>
+      <rect x="390" y="20" width="130" height="42" rx="9" fill="#0e9488" stroke="#14b8a6"/>
+      <rect x="560" y="20" width="140" height="42" rx="9" fill="#2470c4" stroke="#3aa0ff"/>
+      <rect x="740" y="20" width="110" height="42" rx="9" fill="#c43d86" stroke="#f472b6"/>
+      <rect x="880" y="20" width="110" height="42" rx="9" fill="#5f45d6" stroke="#8b6dff"/>
+    </g>
+    <g fill="#eaf2ff"><text x="90" y="46">Parent+PWA</text><text x="275" y="46">Cashier POS</text><text x="455" y="46">API GW</text><text x="630" y="46">Wallet/Ledger</text><text x="795" y="46">Event Bus</text><text x="935" y="46">Notify GW</text></g>
+  </g>
+  <g stroke="#33405f" stroke-dasharray="4 5" stroke-width="1.3">
+    <line x1="90" y1="62" x2="90" y2="440"/><line x1="275" y1="62" x2="275" y2="440"/>
+    <line x1="455" y1="62" x2="455" y2="440"/><line x1="630" y1="62" x2="630" y2="440"/>
+    <line x1="795" y1="62" x2="795" y2="440"/><line x1="935" y1="62" x2="935" y2="440"/>
+  </g>
+  <!-- messages -->
+  <g font-size="11" fill="#cdd6ea">
+    <line x1="90" y1="100" x2="273" y2="100" stroke="#22d3ee" stroke-width="1.7" marker-end="url(#sa)"/>
+    <text x="180" y="93" text-anchor="middle">1 · hands cash</text>
+
+    <line x1="275" y1="140" x2="453" y2="140" stroke="#22d3ee" stroke-width="1.7" marker-end="url(#sa)"/>
+    <text x="365" y="133" text-anchor="middle">2 · POST /topups {child, amt, idemKey}</text>
+
+    <line x1="455" y1="180" x2="628" y2="180" stroke="#22d3ee" stroke-width="1.7" marker-end="url(#sa)"/>
+    <text x="540" y="173" text-anchor="middle">3 · credit wallet</text>
+
+    <rect x="600" y="200" width="60" height="46" rx="6" fill="#123a68" stroke="#2a6bb0"/>
+    <text x="630" y="220" text-anchor="middle" font-size="9.5" fill="#bcd6f5">append</text>
+    <text x="630" y="234" text-anchor="middle" font-size="9.5" fill="#bcd6f5">2 entries</text>
+
+    <line x1="630" y1="278" x2="793" y2="278" stroke="#f472b6" stroke-width="1.7" marker-end="url(#sar)"/>
+    <text x="712" y="271" text-anchor="middle">4 · wallet.topped_up</text>
+
+    <line x1="795" y1="316" x2="933" y2="316" stroke="#f472b6" stroke-width="1.7" marker-end="url(#sar)"/>
+    <text x="865" y="309" text-anchor="middle">5 · fan-out</text>
+
+    <line x1="935" y1="354" x2="92" y2="354" stroke="#f472b6" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#sar)"/>
+    <text x="500" y="347" text-anchor="middle">6 · SIMULATED WhatsApp "Top-up of X received" + push</text>
+
+    <line x1="630" y1="400" x2="92" y2="400" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#sa)"/>
+    <text x="360" y="393" text-anchor="middle">7 · PWA live-updates balance (SSE/poll)</text>
+  </g>
+</svg>
+<div class="cap">Figure 5 — Top-up. The posting is idempotent (idemKey) so a POS retry can't double-credit. Notification is simulated in Phase 1 but flows through the real event path.</div>
+</div>
+
+<!-- ================= FLOW ORDER ================= -->
+<h2 id="flow-order"><span class="n">10</span>Runtime Flow — Pre-order &amp; Delivery</h2>
+<p class="lead">Parent pre-orders; funds are <b>held</b>. At the counter the child's QR is scanned, the item delivered, and the hold is <b>captured</b> — money moves from wallet to cafeteria.</p>
+
+<div class="fig">
+<svg viewBox="0 0 1000 560" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Order and delivery sequence">
+  <defs>
+    <marker id="sa2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#22d3ee"/></marker>
+    <marker id="sar2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#f472b6"/></marker>
+    <filter id="shs2" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#000" flood-opacity="0.4"/></filter>
+  </defs>
+  <g font-size="11" font-weight="700" text-anchor="middle">
+    <g filter="url(#shs2)">
+      <rect x="14"  y="18" width="120" height="42" rx="9" fill="#0a2c52" stroke="#2a6bb0"/>
+      <rect x="168" y="18" width="120" height="42" rx="9" fill="#0a2c52" stroke="#2a6bb0"/>
+      <rect x="322" y="18" width="120" height="42" rx="9" fill="#2470c4" stroke="#3aa0ff"/>
+      <rect x="476" y="18" width="120" height="42" rx="9" fill="#2470c4" stroke="#3aa0ff"/>
+      <rect x="630" y="18" width="120" height="42" rx="9" fill="#2470c4" stroke="#3aa0ff"/>
+      <rect x="784" y="18" width="120" height="42" rx="9" fill="#2470c4" stroke="#3aa0ff"/>
+      <rect x="920" y="18" width="70" height="42" rx="9" fill="#c43d86" stroke="#f472b6"/>
+    </g>
+    <g fill="#eaf2ff">
+      <text x="74" y="44">Parent PWA</text><text x="228" y="44">Cashier POS</text><text x="382" y="44">Ordering</text>
+      <text x="536" y="44">QR Svc</text><text x="690" y="44">Wallet</text><text x="844" y="44">Reporting</text><text x="955" y="38">Notify</text><text x="955" y="52">GW</text>
+    </g>
+  </g>
+  <g stroke="#33405f" stroke-dasharray="4 5" stroke-width="1.2">
+    <line x1="74" y1="60" x2="74" y2="530"/><line x1="228" y1="60" x2="228" y2="530"/>
+    <line x1="382" y1="60" x2="382" y2="530"/><line x1="536" y1="60" x2="536" y2="530"/>
+    <line x1="690" y1="60" x2="690" y2="530"/><line x1="844" y1="60" x2="844" y2="530"/>
+    <line x1="955" y1="60" x2="955" y2="530"/>
+  </g>
+  <text x="20" y="90" fill="#7fd8e8" font-size="11" font-weight="700">— Pre-order (any time) —</text>
+  <g font-size="10.5" fill="#cdd6ea">
+    <line x1="74" y1="110" x2="380" y2="110" stroke="#22d3ee" stroke-width="1.6" marker-end="url(#sa2)"/>
+    <text x="225" y="103" text-anchor="middle">1 · place pre-order (items, meal window)</text>
+    <line x1="382" y1="146" x2="688" y2="146" stroke="#22d3ee" stroke-width="1.6" marker-end="url(#sa2)"/>
+    <text x="535" y="139" text-anchor="middle">2 · place HOLD (reserve funds)</text>
+    <line x1="690" y1="182" x2="384" y2="182" stroke="#22d3ee" stroke-width="1.4" stroke-dasharray="6 4" marker-end="url(#sa2)"/>
+    <text x="535" y="175" text-anchor="middle">3 · hold confirmed</text>
+    <line x1="382" y1="214" x2="76" y2="214" stroke="#22d3ee" stroke-width="1.4" stroke-dasharray="6 4" marker-end="url(#sa2)"/>
+    <text x="225" y="207" text-anchor="middle">4 · order PLACED</text>
+  </g>
+  <text x="20" y="252" fill="#7fd8e8" font-size="11" font-weight="700">— At the counter, during the day —</text>
+  <g font-size="10.5" fill="#cdd6ea">
+    <line x1="228" y1="278" x2="534" y2="278" stroke="#22d3ee" stroke-width="1.6" marker-end="url(#sa2)"/>
+    <text x="380" y="271" text-anchor="middle">5 · scan QR → verify {token}</text>
+    <line x1="536" y1="312" x2="230" y2="312" stroke="#22d3ee" stroke-width="1.4" stroke-dasharray="6 4" marker-end="url(#sa2)"/>
+    <text x="383" y="305" text-anchor="middle">6 · valid → child + order</text>
+    <line x1="228" y1="346" x2="380" y2="346" stroke="#22d3ee" stroke-width="1.6" marker-end="url(#sa2)"/>
+    <text x="304" y="339" text-anchor="middle">7 · mark delivered</text>
+    <line x1="382" y1="380" x2="688" y2="380" stroke="#22d3ee" stroke-width="1.6" marker-end="url(#sa2)"/>
+    <text x="535" y="373" text-anchor="middle">8 · CAPTURE hold → debit child, credit cafeteria</text>
+    <line x1="690" y1="416" x2="842" y2="416" stroke="#f472b6" stroke-width="1.6" marker-end="url(#sar2)"/>
+    <text x="766" y="409" text-anchor="middle">9 · purchase.recorded</text>
+    <line x1="690" y1="450" x2="953" y2="450" stroke="#f472b6" stroke-width="1.6" marker-end="url(#sar2)"/>
+    <text x="820" y="443" text-anchor="middle">10 · event</text>
+    <line x1="955" y1="486" x2="76" y2="486" stroke="#f472b6" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#sar2)"/>
+    <text x="500" y="479" text-anchor="middle">11 · SIMULATED "Delivered: Sandwich + Juice" → parent sees delivered + history</text>
+  </g>
+</svg>
+<div class="cap">Figure 6 — Pre-order &amp; delivery. Funds are reserved at order time (hold) and only moved on delivery (capture), so an undelivered/cancelled order releases the hold automatically. Walk-up purchases skip steps 1–4 and capture directly at delivery.</div>
+</div>
+
+<!-- ================= FLOW OFFLINE ================= -->
+<h2 id="flow-offline"><span class="n">11</span>Runtime Flow — Offline POS &amp; Sync</h2>
+<p class="lead">When the network drops, the line keeps moving. The POS authorises against a <b>signed offline balance snapshot</b>, queues transactions locally, and reconciles idempotently on reconnect.</p>
+
+<div class="fig">
+<svg viewBox="0 0 1000 520" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Offline sync sequence">
+  <defs>
+    <marker id="sa3" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#22d3ee"/></marker>
+    <marker id="saw" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#fbbf24"/></marker>
+    <filter id="shs3" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#000" flood-opacity="0.4"/></filter>
+  </defs>
+  <g font-size="11.5" font-weight="700" text-anchor="middle">
+    <g filter="url(#shs3)">
+      <rect x="30"  y="18" width="180" height="42" rx="9" fill="#0a2c52" stroke="#2a6bb0"/>
+      <rect x="290" y="18" width="200" height="42" rx="9" fill="#b8860b" stroke="#fbbf24"/>
+      <rect x="560" y="18" width="170" height="42" rx="9" fill="#2470c4" stroke="#3aa0ff"/>
+      <rect x="800" y="18" width="170" height="42" rx="9" fill="#2470c4" stroke="#3aa0ff"/>
+    </g>
+    <g fill="#eaf2ff"><text x="120" y="44">Cashier + Child</text><text x="390" y="44">POS PWA (offline)</text><text x="645" y="44">POS·Sync Svc</text><text x="885" y="44">Wallet/Ledger</text></g>
+  </g>
+  <g stroke="#33405f" stroke-dasharray="4 5" stroke-width="1.3">
+    <line x1="120" y1="60" x2="120" y2="500"/><line x1="390" y1="60" x2="390" y2="500"/>
+    <line x1="645" y1="60" x2="645" y2="500"/><line x1="885" y1="60" x2="885" y2="500"/>
+  </g>
+  <!-- online precondition -->
+  <text x="30" y="88" fill="#7fd8e8" font-size="11" font-weight="700">— While online (periodically) —</text>
+  <line x1="645" y1="106" x2="392" y2="106" stroke="#22d3ee" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#sa3)"/>
+  <text x="518" y="99" text-anchor="middle" font-size="10.5" fill="#cdd6ea">0 · push signed balance snapshot + limits (short TTL)</text>
+
+  <!-- offline box -->
+  <rect x="280" y="128" width="700" height="212" rx="12" fill="#251c07" stroke="#a97d17" stroke-dasharray="7 6"/>
+  <text x="300" y="150" fill="#fbcf8a" font-size="11.5" font-weight="700">⚠ NETWORK DOWN — degrade gracefully</text>
+  <g font-size="10.5" fill="#e7ddc4">
+    <line x1="120" y1="176" x2="388" y2="176" stroke="#fbbf24" stroke-width="1.6" marker-end="url(#saw)"/>
+    <text x="250" y="169" text-anchor="middle">1 · scan QR (verify signature locally)</text>
+    <rect x="330" y="196" width="120" height="52" rx="7" fill="#3a2c0a" stroke="#a97d17"/>
+    <text x="390" y="216" text-anchor="middle" font-size="9.5">check snapshot</text>
+    <text x="390" y="230" text-anchor="middle" font-size="9.5">balance &amp; limit</text>
+    <text x="390" y="244" text-anchor="middle" font-size="9.5">apply to local ledger</text>
+    <line x1="388" y1="278" x2="122" y2="278" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="6 4" marker-end="url(#saw)"/>
+    <text x="250" y="271" text-anchor="middle">2 · approve &amp; hand food · print receipt</text>
+    <text x="300" y="312" fill="#fbcf8a" font-size="10">3 · enqueue txn in IndexedDB {idemKey, clientSeq, ts, sig}</text>
+  </g>
+  <!-- reconnect -->
+  <text x="30" y="368" fill="#7fd8e8" font-size="11" font-weight="700">— On reconnect —</text>
+  <g font-size="10.5" fill="#cdd6ea">
+    <line x1="390" y1="388" x2="643" y2="388" stroke="#22d3ee" stroke-width="1.6" marker-end="url(#sa3)"/>
+    <text x="516" y="381" text-anchor="middle">4 · POST /sync batch [queued txns]</text>
+    <line x1="645" y1="422" x2="883" y2="422" stroke="#22d3ee" stroke-width="1.6" marker-end="url(#sa3)"/>
+    <text x="764" y="415" text-anchor="middle">5 · replay each (idempotent by idemKey)</text>
+    <line x1="885" y1="456" x2="647" y2="456" stroke="#22d3ee" stroke-width="1.4" stroke-dasharray="6 4" marker-end="url(#sa3)"/>
+    <text x="765" y="449" text-anchor="middle">6 · applied / duplicate / rejected(insufficient)</text>
+    <line x1="645" y1="490" x2="392" y2="490" stroke="#22d3ee" stroke-width="1.4" stroke-dasharray="6 4" marker-end="url(#sa3)"/>
+    <text x="518" y="483" text-anchor="middle">7 · ack + refreshed snapshot · flag exceptions for staff</text>
+  </g>
+</svg>
+<div class="cap">Figure 7 — Offline POS. Idempotency keys make replay safe even if a batch is sent twice. Rejections (e.g. an offline overspend across two devices) are surfaced to staff/admin rather than silently lost; offline limits bound the exposure. See §14 for the algorithm.</div>
+</div>
+
+<!-- ================= TENANCY ================= -->
+<h2 id="tenancy"><span class="n">12</span>Multi-Tenancy &amp; Isolation</h2>
+<p class="lead">One platform, many schools. We chose the <b>shared-schema, row-level-security</b> model: a single Postgres database with a <code>tenant_id</code> on every tenant-owned row and Postgres RLS policies that make cross-tenant reads impossible even if application code has a bug.</p>
+
+<div class="grid2">
+  <div class="card"><h4>Isolation layers (defence in depth)</h4>
+    <ul class="clean">
+      <li><b>Identity:</b> Keycloak <b>realm per tenant</b>; the JWT carries a <code>tenant_id</code> claim.</li>
+      <li><b>Edge:</b> API Gateway resolves &amp; verifies the tenant from the token and host, and stamps it on the request context.</li>
+      <li><b>App:</b> every repository call runs inside a tenant-scoped transaction that first executes <code>SET LOCAL app.tenant_id = $1</code>.</li>
+      <li><b>Database:</b> RLS <code>USING (tenant_id = current_setting('app.tenant_id')::uuid)</code> on every table — the DB itself refuses foreign rows.</li>
+      <li><b>Storage:</b> object keys and Pub/Sub message attributes are tenant-prefixed; consumers assert the tenant.</li>
+    </ul>
+  </div>
+  <div class="card"><h4>Why not schema/DB-per-tenant?</h4>
+    <p>At school scale (hundreds–thousands of pupils each) per-tenant databases multiply migration, backup and connection-pool overhead for little benefit. Row-level security gives strong, DB-enforced isolation at a fraction of the ops cost, and keeps a <b>single migration path</b>. If a large tenant later needs physical isolation, the model allows promoting them to a dedicated schema/DB without changing service code — the tenant resolver just points them at another datasource.</p>
+  </div>
+</div>
+
+<h4>RLS in practice</h4>
+<pre><code>-- every tenant table
+ALTER TABLE ledger_entry ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ledger_entry FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY tenant_isolation ON ledger_entry
+  USING     (tenant_id = current_setting('app.tenant_id')::uuid)
+  WITH CHECK (tenant_id = current_setting('app.tenant_id')::uuid);
+
+-- Go: per-request, inside a tx, before any query
+tx.Exec(ctx, "SET LOCAL app.tenant_id = $1", tenantID)
+</code></pre>
+<div class="callout warn"><b>Guardrail.</b> The service DB role is <b>non-superuser</b> and <b>non-<code>BYPASSRLS</code></b>, so even a raw query cannot escape the policy. A CI test asserts that querying without setting <code>app.tenant_id</code> returns zero rows.</div>
+
+<!-- ================= DATA MODEL ================= -->
+<h2 id="data"><span class="n">13</span>Data Model</h2>
+<p class="lead">Core entities. Every tenant-owned table carries <code>tenant_id</code> (omitted from the diagram for clarity). The wallet is modelled as accounts + immutable ledger entries.</p>
+
+<div class="fig">
+<svg viewBox="0 0 1000 560" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Entity relationship diagram">
+  <defs>
+    <marker id="erm" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8" fill="none" stroke="#7f8db0" stroke-width="1.4"/></marker>
+    <filter id="she" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#000" flood-opacity="0.4"/></filter>
+  </defs>
+  <g font-family="ui-monospace,Menlo,monospace">
+  <!-- entity template helper via explicit boxes -->
+  <!-- Tenant -->
+  <g filter="url(#she)"><rect x="30" y="30" width="180" height="86" rx="10" fill="#1c2745" stroke="#5f45d6"/></g>
+  <rect x="30" y="30" width="180" height="26" rx="10" fill="#5f45d6"/>
+  <text x="120" y="48" text-anchor="middle" fill="#fff" font-size="12.5" font-weight="700" font-family="sans-serif">Tenant (School)</text>
+  <text x="42" y="74" fill="#cbd5f0" font-size="10.5">id · name</text>
+  <text x="42" y="90" fill="#cbd5f0" font-size="10.5">plan · status</text>
+  <text x="42" y="106" fill="#cbd5f0" font-size="10.5">created_at</text>
+
+  <!-- Parent -->
+  <g filter="url(#she)"><rect x="30" y="170" width="180" height="86" rx="10" fill="#1c2745" stroke="#2a6bb0"/></g>
+  <rect x="30" y="170" width="180" height="26" rx="10" fill="#2470c4"/>
+  <text x="120" y="188" text-anchor="middle" fill="#fff" font-size="12.5" font-weight="700" font-family="sans-serif">Parent</text>
+  <text x="42" y="214" fill="#cbd5f0" font-size="10.5">id · kc_user_id</text>
+  <text x="42" y="230" fill="#cbd5f0" font-size="10.5">name · phone</text>
+  <text x="42" y="246" fill="#cbd5f0" font-size="10.5">email</text>
+
+  <!-- Child -->
+  <g filter="url(#she)"><rect x="30" y="320" width="180" height="100" rx="10" fill="#1c2745" stroke="#2a6bb0"/></g>
+  <rect x="30" y="320" width="180" height="26" rx="10" fill="#2470c4"/>
+  <text x="120" y="338" text-anchor="middle" fill="#fff" font-size="12.5" font-weight="700" font-family="sans-serif">Child (Student)</text>
+  <text x="42" y="364" fill="#cbd5f0" font-size="10.5">id · parent_id</text>
+  <text x="42" y="380" fill="#cbd5f0" font-size="10.5">name · grade</text>
+  <text x="42" y="396" fill="#cbd5f0" font-size="10.5">wallet_account_id</text>
+  <text x="42" y="412" fill="#cbd5f0" font-size="10.5">offline_limit</text>
+
+  <!-- QR Card -->
+  <g filter="url(#she)"><rect x="30" y="470" width="180" height="76" rx="10" fill="#1c2745" stroke="#14b8a6"/></g>
+  <rect x="30" y="470" width="180" height="26" rx="10" fill="#0e9488"/>
+  <text x="120" y="488" text-anchor="middle" fill="#fff" font-size="12.5" font-weight="700" font-family="sans-serif">QRCard</text>
+  <text x="42" y="514" fill="#cbd5f0" font-size="10.5">id · child_id</text>
+  <text x="42" y="530" fill="#cbd5f0" font-size="10.5">token_hash · status</text>
+
+  <!-- Account -->
+  <g filter="url(#she)"><rect x="400" y="30" width="190" height="100" rx="10" fill="#1c2745" stroke="#8b6dff"/></g>
+  <rect x="400" y="30" width="190" height="26" rx="10" fill="#5f45d6"/>
+  <text x="495" y="48" text-anchor="middle" fill="#fff" font-size="12.5" font-weight="700" font-family="sans-serif">Account</text>
+  <text x="412" y="74" fill="#cbd5f0" font-size="10.5">id · type</text>
+  <text x="412" y="90" fill="#cbd5f0" font-size="10.5">(child_wallet |</text>
+  <text x="412" y="106" fill="#cbd5f0" font-size="10.5"> cafeteria | topup_src)</text>
+  <text x="412" y="122" fill="#8fe3c9" font-size="10.5">cached_balance</text>
+
+  <!-- Ledger Entry -->
+  <g filter="url(#she)"><rect x="400" y="180" width="190" height="120" rx="10" fill="#1c2745" stroke="#8b6dff"/></g>
+  <rect x="400" y="180" width="190" height="26" rx="10" fill="#5f45d6"/>
+  <text x="495" y="198" text-anchor="middle" fill="#fff" font-size="12.5" font-weight="700" font-family="sans-serif">LedgerEntry</text>
+  <text x="412" y="224" fill="#cbd5f0" font-size="10.5">id · txn_id</text>
+  <text x="412" y="240" fill="#cbd5f0" font-size="10.5">account_id</text>
+  <text x="412" y="256" fill="#cbd5f0" font-size="10.5">direction (DR|CR)</text>
+  <text x="412" y="272" fill="#cbd5f0" font-size="10.5">amount · currency</text>
+  <text x="412" y="288" fill="#f0b8d6" font-size="10.5">idempotency_key</text>
+
+  <!-- Hold -->
+  <g filter="url(#she)"><rect x="400" y="350" width="190" height="86" rx="10" fill="#1c2745" stroke="#8b6dff"/></g>
+  <rect x="400" y="350" width="190" height="26" rx="10" fill="#5f45d6"/>
+  <text x="495" y="368" text-anchor="middle" fill="#fff" font-size="12.5" font-weight="700" font-family="sans-serif">Hold</text>
+  <text x="412" y="394" fill="#cbd5f0" font-size="10.5">id · account_id</text>
+  <text x="412" y="410" fill="#cbd5f0" font-size="10.5">order_id · amount</text>
+  <text x="412" y="426" fill="#cbd5f0" font-size="10.5">status</text>
+
+  <!-- Order -->
+  <g filter="url(#she)"><rect x="740" y="180" width="200" height="120" rx="10" fill="#1c2745" stroke="#3aa0ff"/></g>
+  <rect x="740" y="180" width="200" height="26" rx="10" fill="#2470c4"/>
+  <text x="840" y="198" text-anchor="middle" fill="#fff" font-size="12.5" font-weight="700" font-family="sans-serif">Order</text>
+  <text x="752" y="224" fill="#cbd5f0" font-size="10.5">id · child_id</text>
+  <text x="752" y="240" fill="#cbd5f0" font-size="10.5">meal_window</text>
+  <text x="752" y="256" fill="#cbd5f0" font-size="10.5">state (placed→…→</text>
+  <text x="752" y="272" fill="#cbd5f0" font-size="10.5"> delivered|cancelled)</text>
+  <text x="752" y="288" fill="#cbd5f0" font-size="10.5">total</text>
+
+  <!-- OrderItem / MenuItem -->
+  <g filter="url(#she)"><rect x="740" y="330" width="200" height="80" rx="10" fill="#1c2745" stroke="#3aa0ff"/></g>
+  <rect x="740" y="330" width="200" height="26" rx="10" fill="#2470c4"/>
+  <text x="840" y="348" text-anchor="middle" fill="#fff" font-size="12.5" font-weight="700" font-family="sans-serif">OrderItem</text>
+  <text x="752" y="374" fill="#cbd5f0" font-size="10.5">order_id · menu_item_id</text>
+  <text x="752" y="390" fill="#cbd5f0" font-size="10.5">qty · unit_price</text>
+
+  <g filter="url(#she)"><rect x="740" y="30" width="200" height="86" rx="10" fill="#1c2745" stroke="#3aa0ff"/></g>
+  <rect x="740" y="30" width="200" height="26" rx="10" fill="#2470c4"/>
+  <text x="840" y="48" text-anchor="middle" fill="#fff" font-size="12.5" font-weight="700" font-family="sans-serif">MenuItem</text>
+  <text x="752" y="74" fill="#cbd5f0" font-size="10.5">id · name · price</text>
+  <text x="752" y="90" fill="#cbd5f0" font-size="10.5">availability_window</text>
+  <text x="752" y="106" fill="#cbd5f0" font-size="10.5">active</text>
+
+  <!-- relationships -->
+  <g stroke="#7f8db0" stroke-width="1.5" fill="none" marker-end="url(#erm)">
+    <path d="M120,116 L120,168"/>            <!-- tenant-parent (conceptual) -->
+    <path d="M120,256 L120,318"/>            <!-- parent-child -->
+    <path d="M120,420 L120,468"/>            <!-- child-qrcard -->
+    <path d="M210,370 C300,360 340,120 398,90"/>   <!-- child-account -->
+    <path d="M495,130 L495,178"/>            <!-- account-ledger -->
+    <path d="M495,300 L495,348"/>            <!-- account-hold -->
+    <path d="M590,392 C660,360 690,300 738,270"/>  <!-- hold-order -->
+    <path d="M840,300 L840,328"/>            <!-- order-orderitem -->
+    <path d="M840,116 L840,178"/>            <!-- menuitem-order (via items) -->
+    <path d="M210,380 C500,470 640,420 738,390" opacity="0.5"/> <!-- child-order -->
+  </g>
+  </g>
+</svg>
+<div class="cap">Figure 8 — Core data model. A <b>Child</b> owns one <b>Account</b> (wallet); the cafeteria and top-up sources are also Accounts. Every money movement writes balanced <b>LedgerEntry</b> rows sharing a <code>txn_id</code>; <b>Holds</b> reserve funds for open <b>Orders</b>. Balances are cached but always re-derivable from entries.</div>
+</div>
+
+<h4>Key data rules</h4>
+<ul class="clean">
+  <li><b>Immutability:</b> <code>ledger_entry</code> is insert-only; corrections are reversing entries, never updates or deletes.</li>
+  <li><b>Balanced transactions:</b> a DB constraint/check ensures all entries with the same <code>txn_id</code> sum to zero.</li>
+  <li><b>Idempotency:</b> a unique index on <code>(tenant_id, idempotency_key)</code> makes retries and offline replays safe.</li>
+  <li><b>Money type:</b> integer minor units (e.g. cents) — never floats.</li>
+  <li><b>Auditability:</b> every event is stored in an <code>outbox</code> table and published via the transactional outbox pattern, so DB state and events never diverge.</li>
+</ul>
+
+<!-- ================= OFFLINE ALGO ================= -->
+<h2 id="offline"><span class="n">14</span>Offline &amp; BYOD POS — the Algorithm</h2>
+<p class="lead">The POS is a PWA installed on staff-owned devices (phones/tablets). A service worker caches the app shell and menu; an IndexedDB queue holds transactions made while offline. The design goal: <b>never block the line</b>, and <b>never lose or double-apply</b> a transaction.</p>
+
+<div class="grid2">
+  <div class="card"><h4>How the POS stays safe offline</h4>
+    <ul class="clean">
+      <li><b>Signed balance snapshots.</b> While online, the server pushes each child's balance + <code>offline_limit</code> as a short-TTL, server-signed token. The POS verifies the signature offline — it can trust the number without trusting the device.</li>
+      <li><b>Bounded exposure.</b> Offline spend per child is capped by <code>offline_limit</code> (e.g. one day's typical spend), so even worst-case multi-device overspend is small and recoverable.</li>
+      <li><b>Local ledger.</b> Each offline sale is written to IndexedDB with an <code>idempotency_key</code>, monotonically increasing <code>clientSeq</code>, timestamp, and the child/QR reference.</li>
+      <li><b>Deterministic replay.</b> On reconnect the queue is POSTed as a batch; the server applies each txn idempotently and returns per-item results.</li>
+      <li><b>Exception surfacing.</b> Rejections (insufficient funds discovered at reconciliation) are flagged to staff/admin, not hidden — the child already ate, so it becomes a small receivable, not a silent loss.</li>
+    </ul>
+  </div>
+  <div class="card"><h4>Conflict resolution</h4>
+    <p>Because two BYOD devices could both sell to the same child while offline, the server is the arbiter. It replays txns ordered by <code>(serverReceiveTime, clientSeq)</code>, applying the Funds Policy against the <b>true</b> ledger balance. First-wins for available funds; overspend beyond a released hold is recorded as an <b>exception</b> with the responsible order/device, and admins get a reconciliation report. The <code>offline_limit</code> keeps this rare and cheap.</p>
+  </div>
+</div>
+
+<h4>Sync contract (server side, simplified)</h4>
+<pre><code>POST /api/pos/sync            Authorization: Bearer &lt;pos-jwt&gt;   Tenant: &lt;realm&gt;
+{
+  "deviceId": "pos-abc",
+  "transactions": [
+    { "idempotencyKey":"7f3a…", "clientSeq": 412, "childId":"…",
+      "qrToken":"…", "items":[{"menuItemId":"…","qty":1}],
+      "amountMinor": 350, "occurredAt":"2026-07-11T09:14:03Z" }
+  ]
+}
+=> 200
+{ "results": [
+    { "idempotencyKey":"7f3a…", "status":"applied",   "txnId":"…" }
+    // or "duplicate" (already applied) | "rejected" (reason: insufficient_funds)
+  ],
+  "snapshotRefresh": [ { "childId":"…", "balanceMinor": 1250, "offlineLimitMinor": 500,
+                         "sig":"…", "exp": 1752… } ]
+}</code></pre>
+<div class="callout info"><b>Idempotency is the whole trick.</b> The client may resend a batch after a flaky connection; the unique <code>(tenant_id, idempotency_key)</code> index means a second apply is a no-op that still returns <code>applied</code>/<code>duplicate</code>, so the POS can safely retry until it gets an ack.</div>
+
+<!-- ================= QR ================= -->
+<h2 id="qr"><span class="n">15</span>QR Card Lifecycle &amp; Printing</h2>
+<p class="lead">The QR card is the child's physical key to the cafeteria. It carries an opaque, signed reference — never a balance or personal data — so a lost card leaks nothing and can be revoked and reissued in seconds.</p>
+
+<div class="fig">
+<svg viewBox="0 0 1000 210" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="QR lifecycle states">
+  <defs>
+    <marker id="qa" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#7f8db0"/></marker>
+    <filter id="shq" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.4"/></filter>
+  </defs>
+  <g filter="url(#shq)" font-family="sans-serif">
+    <rect x="20"  y="70" width="130" height="60" rx="12" fill="#334155" stroke="#64748b"/>
+    <rect x="215" y="70" width="130" height="60" rx="12" fill="#0e9488" stroke="#14b8a6"/>
+    <rect x="410" y="70" width="130" height="60" rx="12" fill="#2470c4" stroke="#3aa0ff"/>
+    <rect x="605" y="20" width="150" height="56" rx="12" fill="#b8860b" stroke="#fbbf24"/>
+    <rect x="605" y="120" width="150" height="56" rx="12" fill="#7f1d1d" stroke="#f87171"/>
+    <rect x="820" y="70" width="150" height="60" rx="12" fill="#5f45d6" stroke="#8b6dff"/>
+  </g>
+  <g text-anchor="middle" fill="#fff" font-size="13" font-weight="700" font-family="sans-serif">
+    <text x="85" y="105">Requested</text>
+    <text x="280" y="105">Issued</text>
+    <text x="475" y="105">Active</text>
+    <text x="680" y="53">Suspended</text>
+    <text x="680" y="153">Lost / Revoked</text>
+    <text x="895" y="105">Reissued</text>
+  </g>
+  <g stroke="#7f8db0" stroke-width="1.6" fill="none" marker-end="url(#qa)" font-size="10" >
+    <path d="M150,100 L213,100"/>
+    <path d="M345,100 L408,100"/>
+    <path d="M540,90 C575,70 585,60 603,52"/>
+    <path d="M540,110 C575,130 585,140 603,148"/>
+    <path d="M755,148 C790,140 800,130 818,112"/>
+    <path d="M680,120 L680,78" stroke-dasharray="4 4"/>
+  </g>
+  <text x="180" y="92" fill="#9fb0d6" font-size="9.5">print</text>
+  <text x="375" y="92" fill="#9fb0d6" font-size="9.5">bind child</text>
+  <text x="800" y="95" fill="#9fb0d6" font-size="9.5">new token</text>
+</svg>
+<div class="cap">Figure 9 — QR card state machine. A card is issued and printed, bound to a child, then Active. It can be Suspended (temporary) or Revoked (lost/stolen); revocation invalidates the token instantly and a Reissued card gets a fresh token. Old scans fail closed.</div>
+</div>
+
+<div class="grid2">
+  <div class="card"><h4>What's on the card</h4>
+    <p>The QR encodes a compact URL/opaque token like <code>snackpay://c/&lt;cardId&gt;.&lt;nonce&gt;.&lt;sig&gt;</code>. The signature (HMAC/asymmetric, per-tenant key) lets the POS verify authenticity <b>offline</b>. The server stores only a <b>hash</b> of the token. No name, balance, or PII is printed — just the child's display name/photo optionally for the cashier, per school policy.</p>
+  </div>
+  <div class="card"><h4>Printing pipeline</h4>
+    <ul class="clean">
+      <li>QR Service renders a print-ready <b>PDF/PNG</b> (card front: QR + child name/grade + school branding) and stores it in GCS.</li>
+      <li>Admin Console prints in-browser to any local/thermal/label printer, or batch-exports a sheet of cards for a class.</li>
+      <li>Card stock options: PVC card, adhesive label, or lanyard tag — all just carry the same QR.</li>
+      <li>Reissue reprints with a new token and auto-revokes the old one.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ================= BILLING ================= -->
+<h2 id="billing"><span class="n">16</span>Subscription &amp; Billing</h2>
+<p class="lead">Schools (tenants) subscribe to a plan. The Billing service owns plans, subscriptions, usage metering and invoices, and talks to a payment provider through a thin adapter so the PSP can change without touching core logic.</p>
+
+<div class="grid3">
+  <div class="kpi"><div class="big">Basic</div><div class="lab">Up to N pupils · core wallet, ordering, POS, QR · monthly per-tenant fee</div></div>
+  <div class="kpi"><div class="big">Standard</div><div class="lab">Higher pupil cap · reporting/exports · multiple cafeteria tills</div></div>
+  <div class="kpi"><div class="big">Usage add-on</div><div class="lab">Optional per-transaction metering for pay-as-you-grow tiers</div></div>
+</div>
+
+<div class="fig">
+<svg viewBox="0 0 980 200" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Subscription state machine">
+  <defs><marker id="ba" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6 Z" fill="#7f8db0"/></marker>
+  <filter id="shb" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.4"/></filter></defs>
+  <g filter="url(#shb)" font-family="sans-serif">
+    <rect x="20"  y="70" width="120" height="56" rx="12" fill="#0e9488" stroke="#14b8a6"/>
+    <rect x="200" y="70" width="120" height="56" rx="12" fill="#2470c4" stroke="#3aa0ff"/>
+    <rect x="380" y="70" width="140" height="56" rx="12" fill="#5f45d6" stroke="#8b6dff"/>
+    <rect x="580" y="20" width="140" height="56" rx="12" fill="#b8860b" stroke="#fbbf24"/>
+    <rect x="580" y="120" width="140" height="56" rx="12" fill="#334155" stroke="#64748b"/>
+    <rect x="780" y="120" width="160" height="56" rx="12" fill="#7f1d1d" stroke="#f87171"/>
+  </g>
+  <g text-anchor="middle" fill="#fff" font-size="12.5" font-weight="700" font-family="sans-serif">
+    <text x="80" y="103">Trial</text><text x="260" y="103">Active</text><text x="450" y="103">Renewing</text>
+    <text x="650" y="53">Past Due</text><text x="650" y="153">Cancelled</text><text x="860" y="153">Suspended</text>
+  </g>
+  <g stroke="#7f8db0" stroke-width="1.5" fill="none" marker-end="url(#ba)" font-size="9.5">
+    <path d="M140,98 L198,98"/><path d="M320,98 L378,98"/>
+    <path d="M520,88 C550,70 560,60 578,52"/>
+    <path d="M580,50 C560,90 530,95 522,100" stroke-dasharray="4 4"/>
+    <path d="M520,110 C550,130 560,140 578,148"/>
+    <path d="M720,148 L778,148"/>
+    <path d="M650,76 L650,118" stroke-dasharray="4 4"/>
+  </g>
+  <text x="558" y="44" fill="#9fb0d6" font-size="9">payment fails</text>
+  <text x="740" y="140" fill="#9fb0d6" font-size="9">dunning fails</text>
+</svg>
+<div class="cap">Figure 10 — Subscription lifecycle. Trials convert to Active; failed charges enter dunning (Past Due) and, if unresolved, Suspended (read-only) then Cancelled. Suspension degrades gracefully — the cafeteria can still operate briefly to avoid stranding pupils.</div>
+</div>
+
+<p>The <b>PaymentProvider</b> is an interface (<code>Charge</code>, <code>Refund</code>, <code>Webhook</code>); a Stripe-style adapter implements it in production, and a <b>fake in-memory adapter</b> implements it locally so billing flows are fully testable offline. Invoices and usage records are per-tenant and exportable.</p>
+
+<!-- ================= NOTIFICATIONS ================= -->
+<h2 id="notify"><span class="n">17</span>Notifications — Simulated in Phase 1</h2>
+<p class="lead">Every parent-facing message (top-up received, order placed, delivered, low balance) flows through one <b>Notification Gateway</b> with pluggable channel drivers. In Phase 1 the WhatsApp and push drivers are <b>simulators</b>: they render and persist the exact message that <em>would</em> be sent, so the product demos end-to-end with zero third-party dependencies or cost.</p>
+
+<pre><code>type Channel interface { Send(ctx, msg Notification) (Receipt, error) }
+
+// Phase 1 — swap-in simulators behind the same interface
+type SimWhatsApp struct{ store Repo }        // records "sent", visible in admin + logs
+type SimPush     struct{ store Repo }        // no-op delivery, full audit trail
+// Phase 2 — real drivers, no caller changes
+type TwilioWhatsApp struct{ /* ... */ }
+type FCMPush        struct{ /* ... */ }</code></pre>
+
+<div class="callout"><b>Why simulate rather than stub-out.</b> The simulators traverse the <b>real</b> event → gateway → template → "delivery" path and store an outbox of messages. When you later drop in Twilio/Meta and FCM, nothing upstream changes — you flip a config flag per tenant. Simulated messages appear in the admin console and the parent's in-app inbox, so the experience is complete today.</div>
+
+<!-- ================= SECURITY ================= -->
+<h2 id="security"><span class="n">18</span>Security &amp; Compliance</h2>
+<div class="grid2">
+  <div class="card"><h4>Identity &amp; access (Keycloak)</h4>
+    <ul class="clean">
+      <li>OIDC/OAuth2; <b>realm per tenant</b> for user isolation.</li>
+      <li>Roles: <code>parent</code>, <code>cashier</code>, <code>school_admin</code>, <code>platform_admin</code>.</li>
+      <li>Short-lived access tokens + refresh; POS devices get scoped, revocable device tokens.</li>
+      <li>Gateway validates JWT signature, audience, expiry and <code>tenant_id</code> claim on every request.</li>
+    </ul>
+  </div>
+  <div class="card"><h4>Data protection</h4>
+    <ul class="clean">
+      <li>TLS everywhere; secrets in GCP Secret Manager.</li>
+      <li>Postgres RLS + non-superuser roles enforce tenant isolation at the DB.</li>
+      <li>Encryption at rest (Cloud SQL, GCS) and PITR backups.</li>
+      <li>Children's data minimised: QR carries no PII; least-privilege access; per-tenant audit logs.</li>
+      <li>Child-safety by design — parents control spend; no direct child payment surface.</li>
+    </ul>
+  </div>
+</div>
+<div class="grid2">
+  <div class="card"><h4>Financial integrity</h4>
+    <ul class="clean">
+      <li>Immutable double-entry ledger; balanced-transaction constraint.</li>
+      <li>Idempotency keys across API + offline sync prevent double-spend/credit.</li>
+      <li>Nightly reconciliation proves ∑debits = ∑credits per tenant.</li>
+      <li>Bounded offline limits cap worst-case exposure.</li>
+    </ul>
+  </div>
+  <div class="card"><h4>Platform hardening</h4>
+    <ul class="clean">
+      <li>Cloud Armor WAF, rate limiting at the gateway.</li>
+      <li>Signed container images from Artifact Registry; least-privilege workload identity.</li>
+      <li>Structured audit trail via the event outbox.</li>
+      <li>Data-residency friendly — regional GKE + Cloud SQL; per-region deploys possible.</li>
+    </ul>
+  </div>
+</div>
+<div class="callout info"><b>Compliance posture.</b> Because pupils are minors, the design favours data minimisation, parental control, regional data residency, and full auditability — a solid base for GDPR-style and local education-data obligations. Formal certification is out of scope for this blueprint but nothing here blocks it.</div>
+
+<!-- ================= LOCAL DEV ================= -->
+<h2 id="local"><span class="n">19</span>One-Command Local Dev &amp; Deploy</h2>
+<p class="lead">The whole platform boots on a laptop with a single command. Local swaps the managed GCP services for open-source equivalents, keeping the <b>same container images and code paths</b>.</p>
+
+<table>
+  <thead><tr><th>Concern</th><th>Production (GCP)</th><th>Local (one command)</th></tr></thead>
+  <tbody>
+    <tr><td>Orchestration</td><td>GKE</td><td>Docker Compose (optionally Kind + Tilt)</td></tr>
+    <tr><td>Database</td><td>Cloud SQL Postgres</td><td>postgres container (same RLS migrations)</td></tr>
+    <tr><td>Cache</td><td>Memorystore</td><td>redis container</td></tr>
+    <tr><td>Events</td><td>Cloud Pub/Sub</td><td>Redpanda / NATS (or Pub/Sub emulator)</td></tr>
+    <tr><td>Object storage</td><td>GCS</td><td>MinIO</td></tr>
+    <tr><td>Identity</td><td>Keycloak (StatefulSet)</td><td>Keycloak container, pre-seeded realm</td></tr>
+    <tr><td>Payments</td><td>PSP adapter</td><td>fake in-memory adapter</td></tr>
+    <tr><td>Notifications</td><td>Twilio/FCM (Phase 2)</td><td>simulator (same as Phase 1)</td></tr>
+  </tbody>
+</table>
+
+<pre><code># bring the entire platform up locally
+make up            # docker compose up --build; seeds Keycloak realm + demo tenant + menu
+
+# what you get
+#   http://localhost:8080   API gateway
+#   http://localhost:3000   Parent PWA        http://localhost:3001  Admin
+#   http://localhost:3002   Cafeteria POS     http://localhost:8081  Keycloak
+#   seeded: 1 school, 2 parents, 3 children, QR cards, sample menu, a trial subscription
+
+make seed          # re-seed demo data       make test   # unit + integration (testcontainers)
+make down          # tear everything down</code></pre>
+
+<div class="callout"><b>Dev/prod parity.</b> Because services depend on <i>interfaces</i> (event bus, object store, payments, notifications) rather than concrete SDKs, the only thing that changes between laptop and GKE is configuration. CI runs the same integration suite using <b>testcontainers</b>, so "works on my machine" and "works in the cluster" converge.</div>
+
+<h4>CI/CD outline</h4>
+<p>Push → build &amp; unit test → integration tests (testcontainers: Postgres+RLS, Redpanda, Keycloak) → build/scan images → push to Artifact Registry → deploy to GKE via Helm/Kustomize with progressive rollout. Migrations run as a pre-deploy job with a single, tenant-agnostic schema.</p>
+
+<!-- ================= NFR ================= -->
+<h2 id="nfr"><span class="n">20</span>Non-Functional Requirements &amp; SLOs</h2>
+<table>
+  <thead><tr><th style="width:22%">Attribute</th><th style="width:26%">Target</th><th>How it's met</th></tr></thead>
+  <tbody>
+    <tr><td>POS transaction latency</td><td>&lt; 3s scan-to-approve; instant when offline</td><td>Pre-authorised wallet, cached snapshots, local ledger.</td></tr>
+    <tr><td>Availability</td><td>99.9% API; POS usable at 100% (offline-tolerant)</td><td>Regional GKE, HA Cloud SQL, offline queue.</td></tr>
+    <tr><td>Peak load</td><td>Interval/lunch bursts — many scans in minutes</td><td>HPA autoscaling, stateless services, Redis, event buffering.</td></tr>
+    <tr><td>Consistency</td><td>Strong for money; eventual for notifications/history</td><td>Ledger in Postgres tx; read models via events.</td></tr>
+    <tr><td>Durability</td><td>No lost transactions</td><td>Transactional outbox, PITR backups, idempotent replay.</td></tr>
+    <tr><td>Scalability (tenants)</td><td>Thousands of schools on shared infra</td><td>Shared schema + RLS, per-service autoscaling.</td></tr>
+    <tr><td>Observability</td><td>Traceable per tenant/txn</td><td>Cloud Trace/Logging, Prometheus/Grafana, correlation IDs.</td></tr>
+    <tr><td>Recovery</td><td>RPO ≤ 5 min · RTO ≤ 1 hr</td><td>Cloud SQL PITR + HA failover; stateless replays.</td></tr>
+  </tbody>
+</table>
+
+<!-- ================= ROADMAP ================= -->
+<h2 id="roadmap"><span class="n">21</span>Phasing &amp; Roadmap</h2>
+<div class="grid2">
+  <div class="card"><h4><span class="tag t-p1">Phase 1 — MVP</span></h4>
+    <ul class="clean">
+      <li>Multi-tenant core on GKE + one-command local.</li>
+      <li>Keycloak identity, parent/cashier/admin roles.</li>
+      <li>Wallet ledger, counter top-ups, balances &amp; history.</li>
+      <li>Menu, pre-orders, delivery capture.</li>
+      <li>Offline-first BYOD POS + sync.</li>
+      <li>QR issuance, verification &amp; printing.</li>
+      <li>Basic subscription &amp; billing (fake PSP locally).</li>
+      <li><b>Simulated</b> notifications/WhatsApp.</li>
+      <li>Parent <b>PWA</b> (responsive web).</li>
+    </ul>
+  </div>
+  <div class="card"><h4><span class="tag t-p2">Phase 2 — Scale &amp; polish</span></h4>
+    <ul class="clean">
+      <li><b>Native mobile app</b> (iOS/Android).</li>
+      <li>Real WhatsApp/push via Twilio/Meta + FCM.</li>
+      <li>Live PSP integration + card top-ups (parent self top-up).</li>
+      <li>Allergen/dietary rules &amp; parental spend controls.</li>
+      <li>Advanced analytics &amp; nutrition reporting.</li>
+      <li>Optional dedicated schema/DB for very large tenants.</li>
+      <li>Loyalty, multi-currency, multi-campus groups.</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ================= RISKS ================= -->
+<h2 id="risks"><span class="n">22</span>Key Risks &amp; Mitigations</h2>
+<table>
+  <thead><tr><th style="width:30%">Risk</th><th style="width:12%">Severity</th><th>Mitigation</th></tr></thead>
+  <tbody>
+    <tr><td>Offline overspend across multiple BYOD tills</td><td><span class="tag t-p2">Med</span></td><td>Per-child <code>offline_limit</code>, signed snapshots, server-arbitrated reconciliation, exception reports.</td></tr>
+    <tr><td>Cross-tenant data leak (shared schema)</td><td><span class="tag t-p1">High</span></td><td>DB-enforced RLS, non-superuser roles, CI isolation tests, tenant-scoped tokens.</td></tr>
+    <tr><td>Lost/cloned QR card</td><td><span class="tag t-p2">Med</span></td><td>Signed opaque tokens (no PII/balance), instant revoke + reissue, server stores only hashes.</td></tr>
+    <tr><td>Ledger corruption / double-spend</td><td><span class="tag t-p1">High</span></td><td>Immutable double-entry, balanced-txn constraint, idempotency keys, nightly reconciliation.</td></tr>
+    <tr><td>Keycloak as a single dependency</td><td><span class="tag t-p2">Med</span></td><td>HA StatefulSet, token caching at gateway, graceful degradation for already-authenticated sessions.</td></tr>
+    <tr><td>BYOD device diversity/security</td><td><span class="tag t-p2">Med</span></td><td>PWA (no install friction), scoped revocable device tokens, no sensitive data cached beyond signed snapshots.</td></tr>
+    <tr><td>Notification vendor lock-in later</td><td><span class="tag t-p1">Low</span></td><td>Channel interface; simulators today, drop-in real drivers in Phase 2.</td></tr>
+  </tbody>
+</table>
+
+<div class="foot">
+  <b>SnackPay — Cashless School Cafeteria Platform · Architecture Blueprint v1.0</b><br>
+  Layered for stakeholders &amp; engineers · C4 model (Context → Container → Component → Deployment) · GCP + Go + Keycloak · Shared-schema RLS multi-tenancy · Offline-first BYOD POS · Simulated notifications (Phase 1) · Native mobile (Phase 2).<br>
+  Generated July 2026. Diagrams are inline SVG — no external dependencies; this file renders offline in any modern browser.
+</div>
+
+</main>
+</div>
+</body>
+</html>
